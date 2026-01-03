@@ -1,0 +1,322 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors - Aquatic Dark Theme */
+  --color-background: #0D1B2A;
+  --color-foreground: #F8FAFC;
+  --color-card: #1B2838;
+  --color-card-foreground: #F8FAFC;
+  --color-popover: #1B2838;
+  --color-popover-foreground: #F8FAFC;
+
+  --color-primary: #00D4FF;
+  --color-primary-foreground: #0A1628;
+
+  --color-secondary: #1E3A5F;
+  --color-secondary-foreground: #F8FAFC;
+
+  --color-muted: #1E3A5F;
+  --color-muted-foreground: #94A3B8;
+
+  --color-accent: #FF6B4A;
+  --color-accent-foreground: #FFFFFF;
+
+  --color-destructive: #EF4444;
+  --color-destructive-foreground: #FFFFFF;
+
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-info: #3B82F6;
+
+  --color-border: #1E3A5F;
+  --color-input: #1E3A5F;
+  --color-ring: #00D4FF;
+
+  /* Ocean gradient colors */
+  --color-ocean-dark: #0A1628;
+  --color-ocean-deep: #0D1B2A;
+  --color-ocean-mid: #1B2838;
+  --color-ocean-light: #1E3A5F;
+  --color-aqua: #00D4FF;
+  --color-coral: #FF6B4A;
+  --color-seafoam: #10B981;
+
+  /* Radius */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* Fonts */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+
+  /* Animations */
+  --animate-fade-in: fade-in 0.3s ease-out;
+  --animate-fade-out: fade-out 0.3s ease-in;
+  --animate-slide-up: slide-up 0.3s ease-out;
+  --animate-slide-down: slide-down 0.3s ease-out;
+  --animate-scale-in: scale-in 0.2s ease-out;
+  --animate-spin-slow: spin 3s linear infinite;
+  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
+  --animate-ripple: ripple 1.5s ease-out infinite;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  @keyframes slide-up {
+    from { transform: translateY(10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes slide-down {
+    from { transform: translateY(-10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes scale-in {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(0, 212, 255, 0.3); }
+    50% { box-shadow: 0 0 40px rgba(0, 212, 255, 0.6); }
+  }
+
+  @keyframes ripple {
+    0% { transform: scale(1); opacity: 0.4; }
+    100% { transform: scale(1.5); opacity: 0; }
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+}
+
+/* Base styles */
+* {
+  border-color: var(--color-border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-ocean-deep);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-ocean-light);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-aqua);
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: var(--color-aqua);
+  color: var(--color-ocean-dark);
+}
+
+/* Utility classes */
+.glass {
+  background: rgba(27, 40, 56, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.gradient-aqua {
+  background: linear-gradient(135deg, var(--color-aqua) 0%, #0891B2 100%);
+}
+
+.gradient-ocean {
+  background: linear-gradient(180deg, var(--color-ocean-dark) 0%, var(--color-ocean-deep) 50%, var(--color-ocean-mid) 100%);
+}
+
+.gradient-coral {
+  background: linear-gradient(135deg, var(--color-coral) 0%, #DC2626 100%);
+}
+
+.text-gradient-aqua {
+  background: linear-gradient(135deg, var(--color-aqua) 0%, #0891B2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-ocean-mid) 0%,
+    var(--color-ocean-light) 50%,
+    var(--color-ocean-mid) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* Water effect overlay */
+.water-overlay {
+  position: relative;
+  overflow: hidden;
+}
+
+.water-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 20% 80%, rgba(0, 212, 255, 0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(0, 212, 255, 0.08) 0%, transparent 40%);
+  pointer-events: none;
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 212, 255, 0.15);
+}
+
+/* Product image zoom */
+.product-image-zoom {
+  overflow: hidden;
+}
+
+.product-image-zoom img {
+  transition: transform 0.5s ease;
+}
+
+.product-image-zoom:hover img {
+  transform: scale(1.1);
+}
+
+/* Livestock parameter badges */
+.param-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: var(--color-ocean-light);
+}
+
+/* Stock status indicators */
+.stock-in {
+  color: var(--color-success);
+}
+
+.stock-low {
+  color: var(--color-warning);
+}
+
+.stock-out {
+  color: var(--color-destructive);
+}
+
+/* Price styling */
+.price-original {
+  text-decoration: line-through;
+  color: var(--color-muted-foreground);
+}
+
+.price-sale {
+  color: var(--color-coral);
+  font-weight: 600;
+}
+
+/* Navigation active state */
+.nav-link-active {
+  color: var(--color-aqua);
+  position: relative;
+}
+
+.nav-link-active::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-aqua);
+  border-radius: 1px;
+}
+
+/* Admin sidebar */
+.admin-sidebar {
+  background: var(--color-ocean-dark);
+  border-right: 1px solid var(--color-border);
+}
+
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  color: var(--color-muted-foreground);
+  transition: all 0.2s;
+}
+
+.admin-nav-item:hover,
+.admin-nav-item.active {
+  background: var(--color-ocean-light);
+  color: var(--color-foreground);
+}
+
+.admin-nav-item.active {
+  border-left: 3px solid var(--color-aqua);
+}

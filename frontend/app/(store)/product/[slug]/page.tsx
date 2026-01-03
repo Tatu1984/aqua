@@ -22,6 +22,7 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductCard } from "@/components/product";
+import { ProductReviews } from "@/components/product/product-reviews";
 import { useCart } from "@/hooks/use-cart";
 import { getProduct, ProductDetail, ProductListItem } from "@/lib/api";
 
@@ -370,6 +371,14 @@ export default function ProductPage() {
           </div>
         </div>
       </div>
+
+      {/* Reviews */}
+      <ProductReviews
+        productId={product.id}
+        productName={product.name}
+        averageRating={product.reviews.average}
+        totalReviews={product.reviews.count}
+      />
 
       {/* Related Products */}
       {relatedProducts.length > 0 && (

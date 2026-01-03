@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Script from "next/script";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -23,6 +24,35 @@ import { useCart } from "@/hooks/use-cart";
 import { useAuth } from "@/hooks/use-auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+declare global {
+  interface Window {
+    Razorpay: new (options: RazorpayOptions) => RazorpayInstance;
+  }
+}
+
+interface RazorpayOptions {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  handler: (response: RazorpayResponse) => void;
+  prefill: { name: string; email: string; contact: string };
+  theme: { color: string };
+}
+
+interface RazorpayInstance {
+  open: () => void;
+  close: () => void;
+}
+
+interface RazorpayResponse {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+}
 
 type CheckoutStep = "address" | "payment" | "confirmation";
 type PaymentMethod = "RAZORPAY" | "COD";
@@ -213,8 +243,7 @@ export default function CheckoutPage() {
       const { order: createdOrder } = await res.json();
 
       // For COD, just show confirmation
-      // For Razorpay, you would integrate the payment gateway here
-      if (paymentMethod === "COD" || paymentMethod === "RAZORPAY") {
+      if (paymentMethod === "COD") {
         setOrder({
           id: createdOrder.id,
           orderNumber: createdOrder.orderNumber,
@@ -222,7 +251,69 @@ export default function CheckoutPage() {
         });
         clearCart();
         setStep("confirmation");
+        return;
       }
+
+      // For Razorpay, create payment order and open checkout
+      const paymentRes = await fetch(`${API_URL}/api/payments/create-order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          amount: total,
+          receipt: createdOrder.orderNumber,
+          notes: { orderId: createdOrder.id },
+        }),
+      });
+
+      if (!paymentRes.ok) {
+        throw new Error("Failed to create payment order");
+      }
+
+      const paymentData = await paymentRes.json();
+
+      // Open Razorpay checkout
+      const options: RazorpayOptions = {
+        key: paymentData.keyId,
+        amount: paymentData.amount,
+        currency: paymentData.currency,
+        name: "Aqua Store",
+        description: `Order ${createdOrder.orderNumber}`,
+        order_id: paymentData.orderId,
+        handler: async (response: RazorpayResponse) => {
+          // Verify payment
+          const verifyRes = await fetch(`${API_URL}/api/payments/verify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              ...response,
+              orderId: createdOrder.id,
+            }),
+          });
+
+          if (verifyRes.ok) {
+            setOrder({
+              id: createdOrder.id,
+              orderNumber: createdOrder.orderNumber,
+              total: createdOrder.total,
+            });
+            clearCart();
+            setStep("confirmation");
+          } else {
+            alert("Payment verification failed. Please contact support.");
+          }
+        },
+        prefill: {
+          name: `${address.firstName} ${address.lastName}`,
+          email: address.email,
+          contact: address.phone,
+        },
+        theme: { color: "#0EA5E9" },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
     } catch (error) {
       console.error("Payment error:", error);
       alert("Failed to process order. Please try again.");
@@ -276,8 +367,13 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Link
+    <>
+      <Script
+        src="https://checkout.razorpay.com/v1/checkout.js"
+        strategy="lazyOnload"
+      />
+      <div className="container mx-auto px-4 py-8">
+        <Link
         href="/cart"
         className="inline-flex items-center gap-1 text-muted-foreground hover:text-primary mb-6"
       >
@@ -721,5 +817,6 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

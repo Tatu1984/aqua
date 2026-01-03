@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -11,6 +11,8 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  FileText,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,54 +25,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// Mock orders data
-const mockOrders = [
-  {
-    id: "ORD-2024-001",
-    customer: { name: "Rahul Sharma", email: "rahul@example.com" },
-    items: 3,
-    total: 2499,
-    status: "DELIVERED",
-    paymentStatus: "PAID",
-    createdAt: "2024-01-15T10:30:00",
-  },
-  {
-    id: "ORD-2024-002",
-    customer: { name: "Priya Patel", email: "priya@example.com" },
-    items: 5,
-    total: 4999,
-    status: "PROCESSING",
-    paymentStatus: "PAID",
-    createdAt: "2024-01-15T09:15:00",
-  },
-  {
-    id: "ORD-2024-003",
-    customer: { name: "Amit Kumar", email: "amit@example.com" },
-    items: 2,
-    total: 1299,
-    status: "SHIPPED",
-    paymentStatus: "PAID",
-    createdAt: "2024-01-14T16:45:00",
-  },
-  {
-    id: "ORD-2024-004",
-    customer: { name: "Sneha Reddy", email: "sneha@example.com" },
-    items: 1,
-    total: 3499,
-    status: "PENDING",
-    paymentStatus: "PENDING",
-    createdAt: "2024-01-14T14:20:00",
-  },
-  {
-    id: "ORD-2024-005",
-    customer: { name: "Vikram Singh", email: "vikram@example.com" },
-    items: 4,
-    total: 899,
-    status: "CANCELLED",
-    paymentStatus: "REFUNDED",
-    createdAt: "2024-01-13T11:00:00",
-  },
-];
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+
+interface Order {
+  id: string;
+  orderNumber: string;
+  email: string;
+  total: number;
+  status: string;
+  paymentStatus: string;
+  createdAt: string;
+  items: { quantity: number }[];
+  user?: { firstName: string; lastName: string };
+}
 
 type OrderStatus = "PENDING" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
 type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
@@ -87,6 +54,8 @@ const getStatusIcon = (status: OrderStatus) => {
       return <CheckCircle className="h-4 w-4" />;
     case "CANCELLED":
       return <XCircle className="h-4 w-4" />;
+    default:
+      return <Clock className="h-4 w-4" />;
   }
 };
 
@@ -102,6 +71,8 @@ const getStatusColor = (status: OrderStatus) => {
       return "bg-green-500/10 text-green-500 border-green-500/20";
     case "CANCELLED":
       return "bg-red-500/10 text-red-500 border-red-500/20";
+    default:
+      return "bg-gray-500/10 text-gray-500 border-gray-500/20";
   }
 };
 
@@ -115,6 +86,8 @@ const getPaymentBadge = (status: PaymentStatus) => {
       return <Badge variant="destructive">Failed</Badge>;
     case "REFUNDED":
       return <Badge variant="secondary">Refunded</Badge>;
+    default:
+      return <Badge variant="secondary">{status}</Badge>;
   }
 };
 
@@ -137,17 +110,71 @@ const formatDate = (dateString: string) => {
 };
 
 export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const filteredOrders = mockOrders.filter((order) => {
+  useEffect(() => {
+    async function fetchOrders() {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          page: page.toString(),
+          limit: "20",
+        });
+        if (search) params.append("search", search);
+        if (statusFilter !== "all") params.append("status", statusFilter);
+
+        const res = await fetch(`${API_URL}/api/orders?${params}`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setOrders(data.orders);
+          setTotalPages(data.pagination?.totalPages || 1);
+        }
+      } catch (error) {
+        console.error("Failed to fetch orders:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchOrders();
+  }, [page, search, statusFilter]);
+
+  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/orders/${orderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (res.ok) {
+        setOrders(
+          orders.map((o) =>
+            o.id === orderId ? { ...o, status: newStatus } : o
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to update status:", error);
+    }
+  };
+
+  const openInvoice = (orderId: string) => {
+    window.open(`${API_URL}/api/orders/${orderId}/invoice?print=true`, "_blank");
+  };
+
+  const filteredOrders = orders.filter((order) => {
     const matchesSearch =
-      order.id.toLowerCase().includes(search.toLowerCase()) ||
-      order.customer.name.toLowerCase().includes(search.toLowerCase()) ||
-      order.customer.email.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
+      order.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
+      order.email.toLowerCase().includes(search.toLowerCase());
+    return matchesSearch;
   });
 
   return (
@@ -165,13 +192,19 @@ export default function OrdersPage() {
             <Input
               placeholder="Search orders..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               className="pl-9"
             />
           </div>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
             className="px-3 py-2 bg-background border border-input rounded-md text-sm"
           >
             <option value="all">All Status</option>
@@ -201,7 +234,13 @@ export default function OrdersPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.length === 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+                  </td>
+                </tr>
+              ) : filteredOrders.length === 0 ? (
                 <tr>
                   <td
                     colSpan={8}
@@ -217,17 +256,26 @@ export default function OrdersPage() {
                     className="border-b border-border hover:bg-secondary/50"
                   >
                     <td className="p-4">
-                      <span className="font-mono font-medium">{order.id}</span>
+                      <span className="font-mono font-medium">
+                        {order.orderNumber}
+                      </span>
                     </td>
                     <td className="p-4">
                       <div>
-                        <p className="font-medium">{order.customer.name}</p>
+                        <p className="font-medium">
+                          {order.user
+                            ? `${order.user.firstName || ""} ${order.user.lastName || ""}`.trim() ||
+                              order.email
+                            : order.email}
+                        </p>
                         <p className="text-sm text-muted-foreground">
-                          {order.customer.email}
+                          {order.email}
                         </p>
                       </div>
                     </td>
-                    <td className="p-4 text-sm">{order.items} items</td>
+                    <td className="p-4 text-sm">
+                      {order.items.reduce((sum, i) => sum + i.quantity, 0)} items
+                    </td>
                     <td className="p-4 font-medium">
                       {formatPrice(order.total)}
                     </td>
@@ -261,10 +309,40 @@ export default function OrdersPage() {
                               View Details
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Package className="h-4 w-4 mr-2" />
-                            Update Status
+                          <DropdownMenuItem onClick={() => openInvoice(order.id)}>
+                            <FileText className="h-4 w-4 mr-2" />
+                            Download Invoice
                           </DropdownMenuItem>
+                          {order.status === "PENDING" && (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleStatusUpdate(order.id, "PROCESSING")
+                              }
+                            >
+                              <Package className="h-4 w-4 mr-2" />
+                              Mark Processing
+                            </DropdownMenuItem>
+                          )}
+                          {order.status === "PROCESSING" && (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleStatusUpdate(order.id, "SHIPPED")
+                              }
+                            >
+                              <Truck className="h-4 w-4 mr-2" />
+                              Mark Shipped
+                            </DropdownMenuItem>
+                          )}
+                          {order.status === "SHIPPED" && (
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleStatusUpdate(order.id, "DELIVERED")
+                              }
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Mark Delivered
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -274,6 +352,30 @@ export default function OrdersPage() {
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-2 p-4 border-t border-border">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground">
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        )}
       </Card>
     </div>
   );

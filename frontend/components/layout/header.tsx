@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
 import { useAuth } from "@/hooks/use-auth";
 import { CartDrawer } from "@/components/cart/cart-drawer";
+import { SearchAutocomplete } from "@/components/search/search-autocomplete";
 
 const categories = [
   {
@@ -273,18 +274,8 @@ export function Header() {
 
             {/* Search & Actions */}
             <div className="flex items-center gap-2">
-              {/* Desktop Search */}
-              <form onSubmit={handleSearch} className="hidden md:block relative w-64 lg:w-80">
-                <Input
-                  placeholder="Search products..."
-                  className="pr-10"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                </button>
-              </form>
+              {/* Desktop Search with Autocomplete */}
+              <SearchAutocomplete className="hidden md:block w-64 lg:w-80" />
 
               {/* Mobile Search Toggle */}
               <Button

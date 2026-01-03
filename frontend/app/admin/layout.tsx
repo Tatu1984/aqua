@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   Fish,
+  Tag,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/categories", label: "Categories", icon: Layers },
   { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
+  { href: "/admin/coupons", label: "Coupons", icon: Tag },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];

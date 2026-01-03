@@ -17,17 +17,22 @@ model User {
   firstName     String?
   lastName      String?
   phone         String?
-  role          String    @default("CUSTOMER")
+  role          String    @default("CUSTOMER") // CUSTOMER, ADMIN, MANAGER, STAFF
   emailVerified Boolean   @default(false)
   isActive      Boolean   @default(true)
+  avatar        String?
+  lastLoginAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  addresses     Address[]
-  orders        Order[]
-  reviews       Review[]
-  wishlist      WishlistItem[]
-  cart          Cart?
+  addresses      Address[]
+  orders         Order[]
+  reviews        Review[]
+  wishlist       WishlistItem[]
+  cart           Cart?
+  couponUsages   CouponUsage[]
+  activityLogs   ActivityLog[]
+  notifications  Notification[]
 
   @@map("users")
 }
@@ -35,9 +40,10 @@ model User {
 model Address {
   id           String   @id @default(cuid())
   userId       String
-  type         String   @default("SHIPPING")
+  type         String   @default("SHIPPING") // SHIPPING, BILLING
   firstName    String
   lastName     String
+  company      String?
   phone        String
   addressLine1 String
   addressLine2 String?
@@ -49,13 +55,14 @@ model Address {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orders Order[]
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shippingOrders Order[] @relation("ShippingAddress")
+  billingOrders  Order[] @relation("BillingAddress")
 
   @@map("addresses")
 }
 
-// ==================== CATEGORIES ====================
+// ==================== CATEGORIES & TAGS ====================
 
 model Category {
   id             String    @id @default(cuid())
@@ -72,11 +79,105 @@ model Category {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
-  children Category[] @relation("CategoryHierarchy")
-  products Product[]
+  parent           Category?          @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children         Category[]         @relation("CategoryHierarchy")
+  products         Product[]
+  couponCategories CouponCategory[]
 
   @@map("categories")
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products ProductTag[]
+
+  @@map("tags")
+}
+
+model ProductTag {
+  id        String   @id @default(cuid())
+  productId String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, tagId])
+  @@map("product_tags")
+}
+
+// ==================== PRODUCT ATTRIBUTES ====================
+
+model Attribute {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  type        String   @default("SELECT") // SELECT, COLOR, BUTTON, IMAGE
+  sortOrder   Int      @default(0)
+  isVisible   Boolean  @default(true)
+  isVariation Boolean  @default(true) // Can be used for variations
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  terms             AttributeTerm[]
+  productAttributes ProductAttribute[]
+
+  @@map("attributes")
+}
+
+model AttributeTerm {
+  id          String   @id @default(cuid())
+  attributeId String
+  name        String
+  slug        String
+  value       String?  // For colors: hex code, for images: url
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  attribute                Attribute                 @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  productAttributeTerms    ProductAttributeTerm[]
+  variantAttributeValues   VariantAttributeValue[]
+
+  @@unique([attributeId, slug])
+  @@map("attribute_terms")
+}
+
+model ProductAttribute {
+  id          String   @id @default(cuid())
+  productId   String
+  attributeId String
+  isVisible   Boolean  @default(true)
+  isVariation Boolean  @default(false) // Used to create variations
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  product   Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attribute Attribute              @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  terms     ProductAttributeTerm[]
+
+  @@unique([productId, attributeId])
+  @@map("product_attributes")
+}
+
+model ProductAttributeTerm {
+  id                 String   @id @default(cuid())
+  productAttributeId String
+  attributeTermId    String
+  createdAt          DateTime @default(now())
+
+  productAttribute ProductAttribute @relation(fields: [productAttributeId], references: [id], onDelete: Cascade)
+  attributeTerm    AttributeTerm    @relation(fields: [attributeTermId], references: [id], onDelete: Cascade)
+
+  @@unique([productAttributeId, attributeTermId])
+  @@map("product_attribute_terms")
 }
 
 // ==================== PRODUCTS ====================
@@ -88,47 +189,79 @@ model Product {
   sku              String   @unique
   description      String?
   shortDescription String?
-  type             String   @default("SIMPLE")
-  status           String   @default("PUBLISHED")
+  type             String   @default("SIMPLE") // SIMPLE, VARIABLE, GROUPED, VIRTUAL, DOWNLOADABLE
+  status           String   @default("DRAFT") // DRAFT, PUBLISHED, ARCHIVED
+  visibility       String   @default("VISIBLE") // VISIBLE, CATALOG, SEARCH, HIDDEN
   categoryId       String?
 
+  // Pricing
   price            Float
   compareAtPrice   Float?
   costPrice        Float?
+  taxClassId       String?
 
-  trackInventory     Boolean @default(true)
-  stockQuantity      Int     @default(0)
-  lowStockThreshold  Int     @default(5)
-  stockStatus        String  @default("IN_STOCK")
-  allowBackorder     Boolean @default(false)
+  // Inventory
+  manageStock       Boolean @default(true)
+  stockQuantity     Int     @default(0)
+  lowStockThreshold Int     @default(5)
+  stockStatus       String  @default("IN_STOCK") // IN_STOCK, OUT_OF_STOCK, ON_BACKORDER
+  backorderMode     String  @default("NO") // NO, NOTIFY, YES
+  soldIndividually  Boolean @default(false) // Limit to 1 per order
 
+  // SEO
   seoTitle       String?
   seoDescription String?
 
-  weight Float?
-  length Float?
-  width  Float?
-  height Float?
+  // Shipping
+  weight           Float?
+  length           Float?
+  width            Float?
+  height           Float?
+  shippingClassId  String?
+  requiresShipping Boolean @default(true)
 
+  // Aquarium-specific
   isLivestock        Boolean @default(false)
-  livestockData      String? // JSON string
+  livestockData      String? // JSON: careLevel, waterTemp, pH, tankSize, etc.
   shippingRestricted Boolean @default(false)
-  allowedCities      String? // JSON string array
+  allowedPincodes    String? // JSON array
   expressOnly        Boolean @default(false)
 
-  isFeatured  Boolean   @default(false)
-  sortOrder   Int       @default(0)
+  // Virtual/Downloadable
+  isVirtual      Boolean @default(false)
+  isDownloadable Boolean @default(false)
+  downloadLimit  Int?
+  downloadExpiry Int?    // Days
+
+  // Display
+  isFeatured   Boolean   @default(false)
+  sortOrder    Int       @default(0)
+  purchaseNote String?
+  menuOrder    Int       @default(0)
+
+  // Related products
+  upsellIds    String? // JSON array of product IDs
+  crossSellIds String? // JSON array of product IDs
+
+  // Timestamps
   publishedAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  category      Category?       @relation(fields: [categoryId], references: [id])
-  images        ProductImage[]
-  variants      ProductVariant[]
-  reviews       Review[]
-  cartItems     CartItem[]
-  orderItems    OrderItem[]
-  wishlistItems WishlistItem[]
+  // Relations
+  category        Category?          @relation(fields: [categoryId], references: [id])
+  taxClass        TaxClass?          @relation(fields: [taxClassId], references: [id])
+  shippingClass   ShippingClass?     @relation(fields: [shippingClassId], references: [id])
+  images          ProductImage[]
+  variants        ProductVariant[]
+  attributes      ProductAttribute[]
+  tags            ProductTag[]
+  reviews         Review[]
+  downloads       ProductDownload[]
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  wishlistItems   WishlistItem[]
+  couponProducts  CouponProduct[]
 
   @@map("products")
 }
@@ -150,23 +283,63 @@ model ProductVariant {
   id             String   @id @default(cuid())
   productId      String
   sku            String   @unique
-  name           String
+  name           String?
   price          Float
   compareAtPrice Float?
-  stockQuantity  Int      @default(0)
-  stockStatus    String   @default("IN_STOCK")
-  image          String?
-  attributes     String?  // JSON string
-  sortOrder      Int      @default(0)
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  costPrice      Float?
 
-  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  cartItems  CartItem[]
-  orderItems OrderItem[]
+  // Inventory
+  manageStock       Boolean @default(true)
+  stockQuantity     Int     @default(0)
+  lowStockThreshold Int     @default(5)
+  stockStatus       String  @default("IN_STOCK")
+  backorderMode     String  @default("NO")
+
+  // Physical
+  weight Float?
+  length Float?
+  width  Float?
+  height Float?
+
+  image     String?
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product          Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributeValues  VariantAttributeValue[]
+  cartItems        CartItem[]
+  orderItems       OrderItem[]
 
   @@map("product_variants")
+}
+
+model VariantAttributeValue {
+  id              String   @id @default(cuid())
+  variantId       String
+  attributeTermId String
+  createdAt       DateTime @default(now())
+
+  variant       ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  attributeTerm AttributeTerm  @relation(fields: [attributeTermId], references: [id], onDelete: Cascade)
+
+  @@unique([variantId, attributeTermId])
+  @@map("variant_attribute_values")
+}
+
+model ProductDownload {
+  id        String   @id @default(cuid())
+  productId String
+  name      String
+  file      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_downloads")
 }
 
 // ==================== REVIEWS ====================
@@ -178,16 +351,42 @@ model Review {
   rating     Int
   title      String?
   content    String?
-  status     String   @default("APPROVED")
-  isVerified Boolean  @default(false)
+  status     String   @default("PENDING") // PENDING, APPROVED, SPAM, TRASH
+  isVerified Boolean  @default(false) // Verified purchase
+  helpfulCount Int    @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product      Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  images       ReviewImage[]
+  adminReply   ReviewReply?
 
   @@unique([productId, userId])
   @@map("reviews")
+}
+
+model ReviewImage {
+  id        String   @id @default(cuid())
+  reviewId  String
+  url       String
+  createdAt DateTime @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("review_images")
+}
+
+model ReviewReply {
+  id        String   @id @default(cuid())
+  reviewId  String   @unique
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("review_replies")
 }
 
 // ==================== CART ====================
@@ -197,6 +396,7 @@ model Cart {
   userId    String?  @unique
   sessionId String?  @unique
   couponId  String?
+  expiresAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -232,39 +432,62 @@ model Order {
   userId      String?
   email       String
   phone       String?
-  status      String   @default("PENDING")
-  paymentStatus String @default("PENDING")
+  status      String   @default("PENDING") // PENDING, PROCESSING, ON_HOLD, COMPLETED, CANCELLED, REFUNDED, FAILED
+  paymentStatus String @default("PENDING") // PENDING, PAID, PARTIALLY_PAID, REFUNDED, PARTIALLY_REFUNDED, FAILED
 
+  // Pricing
   subtotal     Float
   discount     Float    @default(0)
   shippingCost Float    @default(0)
   tax          Float    @default(0)
   total        Float
+  currency     String   @default("INR")
 
+  // Addresses
   shippingAddressId String?
-  shippingMethod    String?
-  trackingNumber    String?
+  billingAddressId  String?
+  billingAddress    Json? // Snapshot of billing address
 
+  // Shipping
+  shippingMethod    String?
+  shippingMethodTitle String?
+  trackingNumber    String?
+  trackingUrl       String?
+
+  // Payment
   paymentMethod     String?
+  paymentMethodTitle String?
   razorpayOrderId   String?
   razorpayPaymentId String?
+  transactionId     String?
 
+  // Coupon
   couponId   String?
   couponCode String?
 
+  // Notes
   customerNote String?
-  internalNote String?
 
+  // IP & User Agent for fraud detection
+  ipAddress String?
+  userAgent String?
+
+  // Timestamps
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   paidAt      DateTime?
-  shippedAt   DateTime?
-  deliveredAt DateTime?
+  completedAt DateTime?
 
-  user            User?       @relation(fields: [userId], references: [id])
-  shippingAddress Address?    @relation(fields: [shippingAddressId], references: [id])
-  coupon          Coupon?     @relation(fields: [couponId], references: [id])
+  // Relations
+  user            User?         @relation(fields: [userId], references: [id])
+  shippingAddress Address?      @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  billingAddr     Address?      @relation("BillingAddress", fields: [billingAddressId], references: [id])
+  coupon          Coupon?       @relation(fields: [couponId], references: [id])
   items           OrderItem[]
+  notes           OrderNote[]
+  refunds         Refund[]
+  shipments       Shipment[]
+  downloads       OrderDownload[]
 
   @@map("orders")
 }
@@ -279,39 +502,293 @@ model OrderItem {
   price     Float
   quantity  Int
   total     Float
+  tax       Float    @default(0)
+  taxClass  String?
   image     String?
+  meta      Json?    // Additional metadata like selected options
   createdAt DateTime @default(now())
 
   order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product         @relation(fields: [productId], references: [id])
   variant ProductVariant? @relation(fields: [variantId], references: [id])
+  refundItems RefundItem[]
 
   @@map("order_items")
+}
+
+model OrderNote {
+  id          String   @id @default(cuid())
+  orderId     String
+  content     String
+  type        String   @default("PRIVATE") // PRIVATE, CUSTOMER
+  addedBy     String?  // User ID or "system"
+  createdAt   DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_notes")
+}
+
+model OrderDownload {
+  id              String   @id @default(cuid())
+  orderId         String
+  productId       String
+  downloadName    String
+  downloadFile    String
+  downloadsRemaining Int?
+  accessExpires   DateTime?
+  createdAt       DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("order_downloads")
+}
+
+// ==================== REFUNDS ====================
+
+model Refund {
+  id            String   @id @default(cuid())
+  orderId       String
+  amount        Float
+  reason        String?
+  status        String   @default("PENDING") // PENDING, APPROVED, COMPLETED, REJECTED
+  refundMethod  String?  // ORIGINAL_PAYMENT, STORE_CREDIT, MANUAL
+  transactionId String?
+  processedBy   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  order Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  items RefundItem[]
+
+  @@map("refunds")
+}
+
+model RefundItem {
+  id          String   @id @default(cuid())
+  refundId    String
+  orderItemId String
+  quantity    Int
+  amount      Float
+  restockItems Boolean @default(false)
+  createdAt   DateTime @default(now())
+
+  refund    Refund    @relation(fields: [refundId], references: [id], onDelete: Cascade)
+  orderItem OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@map("refund_items")
+}
+
+// ==================== SHIPMENTS ====================
+
+model Shipment {
+  id             String   @id @default(cuid())
+  orderId        String
+  trackingNumber String?
+  carrier        String?
+  carrierName    String?
+  trackingUrl    String?
+  status         String   @default("PENDING") // PENDING, SHIPPED, IN_TRANSIT, DELIVERED, RETURNED
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  weight         Float?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("shipments")
+}
+
+// ==================== SHIPPING ====================
+
+model ShippingZone {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  locations ShippingZoneLocation[]
+  methods   ShippingZoneMethod[]
+
+  @@map("shipping_zones")
+}
+
+model ShippingZoneLocation {
+  id             String   @id @default(cuid())
+  shippingZoneId String
+  type           String   // COUNTRY, STATE, POSTCODE
+  code           String   // Country code, state code, or postcode/wildcard
+  createdAt      DateTime @default(now())
+
+  zone ShippingZone @relation(fields: [shippingZoneId], references: [id], onDelete: Cascade)
+
+  @@unique([shippingZoneId, type, code])
+  @@map("shipping_zone_locations")
+}
+
+model ShippingZoneMethod {
+  id             String   @id @default(cuid())
+  shippingZoneId String
+  methodType     String   // FLAT_RATE, FREE_SHIPPING, LOCAL_PICKUP, TABLE_RATE
+  title          String
+  description    String?
+  cost           Float?
+  costPerItem    Float?
+  costPerWeight  Float?
+  minAmount      Float?   // For free shipping threshold
+  maxAmount      Float?
+  minWeight      Float?
+  maxWeight      Float?
+  taxable        Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  isActive       Boolean  @default(true)
+  settings       Json?    // Additional method-specific settings
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  zone ShippingZone @relation(fields: [shippingZoneId], references: [id], onDelete: Cascade)
+
+  @@map("shipping_zone_methods")
+}
+
+model ShippingClass {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+
+  @@map("shipping_classes")
+}
+
+// ==================== TAX ====================
+
+model TaxClass {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rates    TaxRate[]
+  products Product[]
+
+  @@map("tax_classes")
+}
+
+model TaxRate {
+  id          String   @id @default(cuid())
+  taxClassId  String
+  name        String
+  rate        Float    // Percentage
+  country     String   @default("IN")
+  state       String?  // Empty for all states
+  postcode    String?  // Supports wildcards
+  city        String?
+  priority    Int      @default(1)
+  compound    Boolean  @default(false) // Apply on top of other taxes
+  shipping    Boolean  @default(true)  // Apply to shipping
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  taxClass TaxClass @relation(fields: [taxClassId], references: [id], onDelete: Cascade)
+
+  @@map("tax_rates")
 }
 
 // ==================== COUPONS ====================
 
 model Coupon {
-  id            String    @id @default(cuid())
-  code          String    @unique
-  description   String?
-  type          String    @default("PERCENTAGE")
-  value         Float
-  minOrderValue Float?
-  maxDiscount   Float?
-  usageLimit    Int?
-  usageCount    Int       @default(0)
-  perUserLimit  Int?
-  isActive      Boolean   @default(true)
-  startsAt      DateTime?
-  expiresAt     DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  code        String    @unique
+  description String?
+  type        String    @default("PERCENTAGE") // PERCENTAGE, FIXED_CART, FIXED_PRODUCT, FREE_SHIPPING
+  value       Float
 
-  orders Order[]
-  carts  Cart[]
+  // Usage limits
+  usageLimit      Int?      // Total uses
+  usageLimitPerUser Int?    // Per customer
+  usageCount      Int       @default(0)
+  limitUsageToXItems Int?   // Apply to first X items only
+
+  // Cart requirements
+  minOrderValue   Float?
+  maxOrderValue   Float?
+  maxDiscount     Float?    // Cap on discount amount
+
+  // Restrictions
+  individualUseOnly Boolean @default(false) // Can't combine with other coupons
+  excludeSaleItems  Boolean @default(false)
+  allowedEmails     String? // JSON array of allowed emails/patterns
+
+  // Validity
+  isActive   Boolean   @default(true)
+  startsAt   DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // Relations
+  products   CouponProduct[]
+  categories CouponCategory[]
+  orders     Order[]
+  carts      Cart[]
+  usages     CouponUsage[]
 
   @@map("coupons")
+}
+
+model CouponProduct {
+  id        String   @id @default(cuid())
+  couponId  String
+  productId String
+  type      String   @default("INCLUDE") // INCLUDE, EXCLUDE
+  createdAt DateTime @default(now())
+
+  coupon  Coupon  @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, productId])
+  @@map("coupon_products")
+}
+
+model CouponCategory {
+  id         String   @id @default(cuid())
+  couponId   String
+  categoryId String
+  type       String   @default("INCLUDE") // INCLUDE, EXCLUDE
+  createdAt  DateTime @default(now())
+
+  coupon   Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, categoryId])
+  @@map("coupon_categories")
+}
+
+model CouponUsage {
+  id        String   @id @default(cuid())
+  couponId  String
+  userId    String
+  orderId   String?
+  usedAt    DateTime @default(now())
+
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("coupon_usages")
 }
 
 // ==================== WISHLIST ====================
@@ -336,9 +813,10 @@ model Banner {
   title      String
   subtitle   String?
   image      String?
+  imageMobile String?
   link       String?
   buttonText String?
-  position   String    @default("home_hero")
+  position   String    @default("home_hero") // home_hero, home_secondary, category_top, etc.
   sortOrder  Int       @default(0)
   isActive   Boolean   @default(true)
   startsAt   DateTime?
@@ -349,15 +827,198 @@ model Banner {
   @@map("banners")
 }
 
+model Page {
+  id             String   @id @default(cuid())
+  title          String
+  slug           String   @unique
+  content        String?
+  seoTitle       String?
+  seoDescription String?
+  template       String   @default("DEFAULT") // DEFAULT, FULL_WIDTH, SIDEBAR
+  status         String   @default("DRAFT") // DRAFT, PUBLISHED
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("pages")
+}
+
+model MenuItem {
+  id        String   @id @default(cuid())
+  menuId    String
+  parentId  String?
+  title     String
+  url       String?
+  type      String   @default("CUSTOM") // CUSTOM, PAGE, CATEGORY, PRODUCT
+  targetId  String?  // ID of page/category/product
+  target    String   @default("_self") // _self, _blank
+  sortOrder Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  menu     Menu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  parent   MenuItem?  @relation("MenuHierarchy", fields: [parentId], references: [id])
+  children MenuItem[] @relation("MenuHierarchy")
+
+  @@map("menu_items")
+}
+
+model Menu {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  location  String?  // header, footer, mobile
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items MenuItem[]
+
+  @@map("menus")
+}
+
 // ==================== SETTINGS ====================
 
 model Setting {
   id        String   @id @default(cuid())
   key       String   @unique
   value     String   // JSON string
-  group     String   @default("general")
+  group     String   @default("general") // general, shipping, payment, tax, email, etc.
+  autoload  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("settings")
+}
+
+// ==================== EMAIL TEMPLATES ====================
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique // order_confirmation, order_shipped, etc.
+  subject     String
+  bodyHtml    String
+  bodyText    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id          String   @id @default(cuid())
+  to          String
+  subject     String
+  template    String?
+  status      String   @default("SENT") // SENT, FAILED, BOUNCED
+  error       String?
+  metadata    Json?
+  sentAt      DateTime @default(now())
+
+  @@map("email_logs")
+}
+
+// ==================== NOTIFICATIONS ====================
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // ORDER_PLACED, ORDER_SHIPPED, REVIEW_APPROVED, etc.
+  title     String
+  message   String
+  data      Json?    // Related IDs and metadata
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// ==================== ACTIVITY LOG ====================
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String   // CREATE, UPDATE, DELETE, LOGIN, etc.
+  entityType  String   // Product, Order, User, etc.
+  entityId    String?
+  description String?
+  oldValues   Json?
+  newValues   Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("activity_logs")
+}
+
+// ==================== ANALYTICS ====================
+
+model PageView {
+  id         String   @id @default(cuid())
+  path       String
+  referrer   String?
+  userAgent  String?
+  ipAddress  String?
+  sessionId  String?
+  userId     String?
+  createdAt  DateTime @default(now())
+
+  @@index([path])
+  @@index([createdAt])
+  @@map("page_views")
+}
+
+model ProductView {
+  id        String   @id @default(cuid())
+  productId String
+  sessionId String?
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([createdAt])
+  @@map("product_views")
+}
+
+// ==================== INVENTORY ====================
+
+model InventoryLog {
+  id            String   @id @default(cuid())
+  productId     String
+  variantId     String?
+  type          String   // INCREASE, DECREASE, SET
+  quantity      Int
+  previousQty   Int
+  newQty        Int
+  reason        String?  // SALE, REFUND, RESTOCK, ADJUSTMENT, etc.
+  referenceType String?  // Order, Refund, etc.
+  referenceId   String?
+  notes         String?
+  createdBy     String?
+  createdAt     DateTime @default(now())
+
+  @@index([productId])
+  @@map("inventory_logs")
+}
+
+// ==================== SCHEDULED TASKS ====================
+
+model ScheduledTask {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  type        String   // ABANDONED_CART, REVIEW_REMINDER, STOCK_ALERT, etc.
+  schedule    String   // Cron expression
+  lastRun     DateTime?
+  nextRun     DateTime?
+  isActive    Boolean  @default(true)
+  config      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("scheduled_tasks")
 }

@@ -153,9 +153,9 @@ export async function POST(request: NextRequest) {
         images: data.images?.length
           ? {
               create: data.images.map(
-                (img: { url: string; alt?: string }, idx: number) => ({
-                  url: img.url,
-                  alt: img.alt || data.name,
+                (img: string | { url: string; alt?: string }, idx: number) => ({
+                  url: typeof img === "string" ? img : img.url,
+                  alt: typeof img === "string" ? data.name : (img.alt || data.name),
                   sortOrder: idx,
                 })
               ),

@@ -7,7 +7,6 @@ import { ProductCard } from "@/components/product";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 interface Product {
   id: string;
@@ -63,7 +62,7 @@ function SearchContent() {
       if (filters.sort) params.set("sort", filters.sort);
       params.set("page", String(pagination.page));
 
-      const res = await fetch(`${API_URL}/api/search?${params}`);
+      const res = await fetch(`/api/search?${params}`);
       const data = await res.json();
 
       setProducts(data.products || []);

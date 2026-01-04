@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Package } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeft, Save, Package, Upload, X, ImageIcon } from "lucide-react";
 
 interface Category {
   id: string;
@@ -13,7 +14,10 @@ interface Category {
 export default function NewProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [images, setImages] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -78,6 +82,44 @@ export default function NewProductPage() {
     }));
   }
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await fetch("/api/admin/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setImages((prev) => [...prev, data.url]);
+        } else {
+          const error = await res.json();
+          alert(error.error || "Failed to upload image");
+        }
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Failed to upload image");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
+
+  function removeImage(index: number) {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -98,6 +140,7 @@ export default function NewProductPage() {
           width: formData.width ? parseFloat(formData.width) : null,
           height: formData.height ? parseFloat(formData.height) : null,
           categoryId: formData.categoryId || null,
+          images: images,
         }),
       });
 
@@ -381,6 +424,56 @@ export default function NewProductPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Images */}
+            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <ImageIcon className="h-5 w-5" />
+                Product Images
+              </h2>
+
+              {/* Image Grid */}
+              {images.length > 0 && (
+                <div className="grid grid-cols-2 gap-2">
+                  {images.map((url, index) => (
+                    <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-secondary">
+                      <Image src={url} alt={`Product ${index + 1}`} fill className="object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-red-500 text-white hover:bg-red-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Upload Button */}
+              <div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  multiple
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-border rounded-lg hover:border-[#00D4FF] hover:bg-secondary/50 transition-colors disabled:opacity-50"
+                >
+                  <Upload className="h-5 w-5" />
+                  {uploading ? "Uploading..." : "Upload Images"}
+                </button>
+                <p className="text-xs text-muted-foreground mt-2 text-center">
+                  JPEG, PNG, WebP or GIF. Max 5MB.
+                </p>
+              </div>
+            </div>
+
             {/* Status */}
             <div className="bg-card border border-border rounded-lg p-6 space-y-4">
               <h2 className="text-lg font-semibold">Status</h2>

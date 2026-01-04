@@ -12,18 +12,22 @@ const nextConfig: NextConfig = {
     ],
   },
   transpilePackages: ["@aqua/shared"],
-  async rewrites() {
+  async redirects() {
     return [
-      // Admin pages - proxy to backend
       {
         source: "/admin",
         destination: `${BACKEND_URL}/admin`,
+        permanent: false,
       },
       {
         source: "/admin/:path*",
         destination: `${BACKEND_URL}/admin/:path*`,
+        permanent: false,
       },
-      // API routes - proxy to backend
+    ];
+  },
+  async rewrites() {
+    return [
       {
         source: "/api/:path*",
         destination: `${BACKEND_URL}/api/:path*`,

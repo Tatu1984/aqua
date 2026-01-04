@@ -105,11 +105,9 @@ export function Header() {
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [activeCategory, setActiveCategory] = React.useState<string | null>(null);
-  const [cartOpen, setCartOpen] = React.useState(false);
-
-  const { items } = useCart();
+  const { cart, setOpen: setCartOpen } = useCart();
   const { user, logout, checkAuth } = useAuth();
-  const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  const cartCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
   React.useEffect(() => {
     checkAuth();
@@ -394,7 +392,7 @@ export function Header() {
         </AnimatePresence>
       </header>
 
-      <CartDrawer open={cartOpen} onOpenChange={setCartOpen} />
+      <CartDrawer />
     </>
   );
 }

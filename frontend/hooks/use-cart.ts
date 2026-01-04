@@ -15,6 +15,7 @@ interface CartStore {
   removeItem: (itemId: string) => Promise<void>;
   applyCoupon: (code: string) => Promise<{ success: boolean; error?: string }>;
   removeCoupon: () => Promise<void>;
+  clearCart: () => void;
 }
 
 const emptyCart: Cart = {
@@ -104,5 +105,9 @@ export const useCart = create<CartStore>((set, get) => ({
       console.error("Failed to remove coupon:", error);
       set({ isLoading: false });
     }
+  },
+
+  clearCart: () => {
+    set({ cart: emptyCart });
   },
 }));

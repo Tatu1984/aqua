@@ -77,7 +77,8 @@ interface OrderResult {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, clearCart } = useCart();
+  const { cart, clearCart } = useCart();
+  const items = cart.items;
   const { user } = useAuth();
   const [step, setStep] = useState<CheckoutStep>("address");
   const [processing, setProcessing] = useState(false);
@@ -120,7 +121,7 @@ export default function CheckoutPage() {
   }, [user]);
 
   const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + item.product.price * item.quantity,
     0
   );
   const shippingCost = subtotal >= 1000 ? 0 : 99;
@@ -202,11 +203,11 @@ export default function CheckoutPage() {
         items: items.map((item) => ({
           productId: item.productId,
           variantId: item.variantId,
-          name: item.name,
-          sku: item.sku || `SKU-${item.productId}`,
-          price: item.price,
+          name: item.product.name,
+          sku: item.variant?.sku || `SKU-${item.productId}`,
+          price: item.product.price,
           quantity: item.quantity,
-          image: item.image,
+          image: item.product.image,
         })),
         email: address.email,
         phone: address.phone,
@@ -706,10 +707,10 @@ export default function CheckoutPage() {
               {items.map((item) => (
                 <div key={item.id} className="flex gap-3">
                   <div className="relative w-14 h-14 rounded bg-secondary flex-shrink-0">
-                    {item.image && (
+                    {item.product.image && (
                       <Image
-                        src={item.image}
-                        alt={item.name}
+                        src={item.product.image}
+                        alt={item.product.name}
                         fill
                         className="object-cover rounded"
                       />
@@ -719,10 +720,10 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm line-clamp-1">{item.name}</p>
+                    <p className="text-sm line-clamp-1">{item.product.name}</p>
                   </div>
                   <p className="text-sm font-medium">
-                    {formatPrice(item.price * item.quantity)}
+                    {formatPrice(item.product.price * item.quantity)}
                   </p>
                 </div>
               ))}

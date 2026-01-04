@@ -1,4 +1,8 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -18,6 +22,8 @@ import {
   Bell,
   Search,
   ChevronDown,
+  ExternalLink,
+  LogOut,
 } from "lucide-react";
 
 const navigation = [
@@ -37,11 +43,81 @@ const navigation = [
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
+interface AdminUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  role: string;
+}
+
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [user, setUser] = useState<AdminUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const isLoginPage = pathname === "/admin/login";
+
+  useEffect(() => {
+    if (!isLoginPage) {
+      checkAuth();
+    } else {
+      setLoading(false);
+    }
+  }, [isLoginPage]);
+
+  const checkAuth = async () => {
+    try {
+      const res = await fetch("/api/auth/me");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user && (data.user.role === "ADMIN" || data.user.role === "MANAGER" || data.user.role === "STAFF")) {
+          setUser(data.user);
+        } else {
+          router.push("/admin/login");
+        }
+      } else {
+        router.push("/admin/login");
+      }
+    } catch {
+      router.push("/admin/login");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      router.push("/admin/login");
+    } catch {
+      router.push("/admin/login");
+    }
+  };
+
+  // For login page, skip loading state and just render children
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0A1628]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00D4FF]" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
@@ -77,17 +153,39 @@ export default function AdminLayout({
         </nav>
 
         {/* User */}
-        <div className="p-4 border-t border-border">
-          <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-[#1E3A5F] transition-colors">
+        <div className="p-4 border-t border-border relative">
+          <button
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-[#1E3A5F] transition-colors"
+          >
             <div className="w-8 h-8 rounded-full bg-[#00D4FF] flex items-center justify-center text-sm font-medium text-[#0A1628]">
-              A
+              {user.firstName?.[0] || user.email[0].toUpperCase()}
             </div>
             <div className="flex-1 text-left">
-              <p className="text-sm font-medium">Admin User</p>
-              <p className="text-xs text-muted-foreground">admin@aqua.store</p>
+              <p className="text-sm font-medium">{user.firstName} {user.lastName}</p>
+              <p className="text-xs text-muted-foreground">{user.email}</p>
             </div>
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showUserMenu ? "rotate-180" : ""}`} />
           </button>
+
+          {showUserMenu && (
+            <div className="absolute bottom-full left-4 right-4 mb-2 bg-[#1E3A5F] border border-border rounded-lg shadow-lg overflow-hidden">
+              <Link
+                href="/"
+                className="flex items-center gap-2 px-4 py-3 text-sm hover:bg-[#2A4A6F] transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Visit Site
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 w-full px-4 py-3 text-sm text-red-400 hover:bg-[#2A4A6F] transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
+            </div>
+          )}
         </div>
       </aside>
 

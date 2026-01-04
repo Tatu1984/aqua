@@ -10,9 +10,9 @@ interface Category {
   name: string;
   slug: string;
   image: string | null;
-  parent: { name: string } | null;
-  children: { id: string }[];
-  _count: { products: number };
+  parentName: string | null;
+  childrenCount: number;
+  productCount: number;
 }
 
 export default function CategoriesPage() {
@@ -90,10 +90,10 @@ export default function CategoriesPage() {
                   </div>
                 </div>
                 <div className="mt-3 flex items-center gap-4 text-sm text-muted-foreground">
-                  <span>{category._count?.products || 0} products</span>
-                  <span>{category.children?.length || 0} subcategories</span>
+                  <span>{category.productCount || 0} products</span>
+                  <span>{category.childrenCount || 0} subcategories</span>
                 </div>
-                {category.parent && <p className="mt-2 text-xs text-muted-foreground">Parent: {category.parent.name}</p>}
+                {category.parentName && <p className="mt-2 text-xs text-muted-foreground">Parent: {category.parentName}</p>}
               </div>
             </div>
           ))

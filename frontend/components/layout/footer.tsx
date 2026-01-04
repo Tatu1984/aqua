@@ -147,7 +147,11 @@ export function Footer() {
                 </li>
               ))}
             </ul>
-            <h4 className="font-semibold mb-4 mt-6">Legal</h4>
+          </div>
+
+          {/* Legal Links */}
+          <div>
+            <h4 className="font-semibold mb-4">Legal</h4>
             <ul className="space-y-2">
               {footerLinks.legal.map((link) => (
                 <li key={link.name}>

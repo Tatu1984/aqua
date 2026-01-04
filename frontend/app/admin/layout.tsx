@@ -1,28 +1,40 @@
-"use client";
-
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
-  Layers,
+  FolderTree,
   ShoppingCart,
   Users,
-  Settings,
+  UserCog,
+  Warehouse,
+  Ticket,
+  CreditCard,
+  FileText,
   Menu,
-  X,
+  Image,
+  Settings,
+  BarChart3,
   Fish,
+  Bell,
+  Search,
+  ChevronDown,
 } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
 
-const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/products", label: "Products", icon: Package },
-  { href: "/admin/categories", label: "Categories", icon: Layers },
-  { href: "/admin/orders", label: "Orders", icon: ShoppingCart },
-  { href: "/admin/customers", label: "Customers", icon: Users },
-  { href: "/admin/settings", label: "Settings", icon: Settings },
+const navigation = [
+  { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { name: "Products", href: "/admin/products", icon: Package },
+  { name: "Categories", href: "/admin/categories", icon: FolderTree },
+  { name: "Orders", href: "/admin/orders", icon: ShoppingCart },
+  { name: "Customers", href: "/admin/customers", icon: Users },
+  { name: "Users", href: "/admin/users", icon: UserCog },
+  { name: "Inventory", href: "/admin/inventory", icon: Warehouse },
+  { name: "Coupons", href: "/admin/coupons", icon: Ticket },
+  { name: "Payments", href: "/admin/payments", icon: CreditCard },
+  { name: "Pages", href: "/admin/pages", icon: FileText },
+  { name: "Menus", href: "/admin/menus", icon: Menu },
+  { name: "Banners", href: "/admin/banners", icon: Image },
+  { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+  { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
 export default function AdminLayout({
@@ -30,101 +42,82 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
+    <div className="flex min-h-screen">
       {/* Sidebar */}
-      <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64 bg-card border-r border-border transform transition-transform duration-200 lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="flex items-center justify-between h-16 px-4 border-b border-border">
-            <Link href="/admin" className="flex items-center gap-2">
-              <Fish className="h-8 w-8 text-primary" />
-              <span className="font-display font-bold text-xl">Aqua Admin</span>
-            </Link>
-            <button
-              className="lg:hidden p-2 hover:bg-secondary rounded-lg"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </button>
+      <aside className="w-64 bg-[#0A1628] border-r border-border flex flex-col">
+        {/* Logo */}
+        <div className="h-16 flex items-center gap-2 px-6 border-b border-border">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00D4FF] to-[#00D4FF]/60 flex items-center justify-center">
+            <Fish className="h-5 w-5 text-[#0A1628]" />
           </div>
+          <span className="text-lg font-bold">Aqua Admin</span>
+        </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {navItems.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/admin" && pathname.startsWith(item.href));
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-secondary text-muted-foreground hover:text-foreground"
-                  }`}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <item.icon className="h-5 w-5" />
-                  <span className="font-medium">{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+        {/* Environment Badge */}
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-2 px-3 py-2 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+            <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+            <span className="text-xs font-medium text-yellow-500">Sandbox Mode</span>
+          </div>
+        </div>
 
-          {/* Footer */}
-          <div className="p-4 border-t border-border">
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          {navigation.map((item) => (
             <Link
-              href="/"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+              key={item.name}
+              href={item.href}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-[#1E3A5F] hover:text-foreground transition-colors"
             >
-              <span>View Store</span>
+              <item.icon className="h-5 w-5" />
+              {item.name}
             </Link>
-          </div>
+          ))}
+        </nav>
+
+        {/* User */}
+        <div className="p-4 border-t border-border">
+          <button className="flex items-center gap-3 w-full px-3 py-2 rounded-lg hover:bg-[#1E3A5F] transition-colors">
+            <div className="w-8 h-8 rounded-full bg-[#00D4FF] flex items-center justify-center text-sm font-medium text-[#0A1628]">
+              A
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-sm font-medium">Admin User</p>
+              <p className="text-xs text-muted-foreground">admin@aqua.store</p>
+            </div>
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className="lg:pl-64">
-        {/* Top Bar */}
-        <header className="sticky top-0 z-30 h-16 bg-card/80 backdrop-blur-lg border-b border-border">
-          <div className="flex items-center justify-between h-full px-4">
-            <button
-              className="lg:hidden p-2 hover:bg-secondary rounded-lg"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-
-            <div className="flex-1" />
-
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground">Admin</span>
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                <span className="text-sm font-medium text-primary">A</span>
-              </div>
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <header className="h-16 border-b border-border flex items-center justify-between px-6">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search..."
+                className="w-80 h-10 pl-10 pr-4 bg-card border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00D4FF]"
+              />
             </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button className="relative p-2 rounded-lg hover:bg-secondary transition-colors">
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#FF6B4A]" />
+            </button>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="p-4 md:p-6 lg:p-8">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-background">
+          {children}
+        </main>
       </div>
     </div>
   );

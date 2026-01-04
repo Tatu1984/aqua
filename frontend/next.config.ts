@@ -12,20 +12,6 @@ const nextConfig: NextConfig = {
     ],
   },
   transpilePackages: ["@aqua/shared"],
-  async redirects() {
-    return [
-      {
-        source: "/admin",
-        destination: `${BACKEND_URL}/admin`,
-        permanent: false,
-      },
-      {
-        source: "/admin/:path*",
-        destination: `${BACKEND_URL}/admin/:path*`,
-        permanent: false,
-      },
-    ];
-  },
   async rewrites() {
     return [
       {

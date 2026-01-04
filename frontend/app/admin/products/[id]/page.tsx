@@ -1,19 +1,60 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, Package } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeft, Save, Trash2, Package, ImagePlus, X } from "lucide-react";
 
 interface Category {
   id: string;
   name: string;
 }
 
-export default function NewProductPage() {
+interface ProductImage {
+  id: string;
+  url: string;
+  alt: string | null;
+  sortOrder: number;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  sku: string;
+  description: string | null;
+  shortDescription: string | null;
+  type: string;
+  status: string;
+  visibility: string;
+  categoryId: string | null;
+  price: number;
+  compareAtPrice: number | null;
+  costPrice: number | null;
+  stockQuantity: number;
+  lowStockThreshold: number;
+  stockStatus: string;
+  weight: number | null;
+  length: number | null;
+  width: number | null;
+  height: number | null;
+  isFeatured: boolean;
+  isLivestock: boolean;
+  requiresShipping: boolean;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  images: ProductImage[];
+}
+
+export default function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [product, setProduct] = useState<Product | null>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -43,8 +84,53 @@ export default function NewProductPage() {
   });
 
   useEffect(() => {
+    fetchProduct();
     fetchCategories();
-  }, []);
+  }, [id]);
+
+  async function fetchProduct() {
+    try {
+      const res = await fetch(`/api/admin/products/${id}`);
+      if (!res.ok) {
+        router.push("/admin/products");
+        return;
+      }
+      const data = await res.json();
+      const p = data.product;
+      setProduct(p);
+      setFormData({
+        name: p.name || "",
+        slug: p.slug || "",
+        sku: p.sku || "",
+        description: p.description || "",
+        shortDescription: p.shortDescription || "",
+        type: p.type || "SIMPLE",
+        status: p.status || "DRAFT",
+        visibility: p.visibility || "VISIBLE",
+        categoryId: p.categoryId || "",
+        price: p.price?.toString() || "",
+        compareAtPrice: p.compareAtPrice?.toString() || "",
+        costPrice: p.costPrice?.toString() || "",
+        stockQuantity: p.stockQuantity?.toString() || "0",
+        lowStockThreshold: p.lowStockThreshold?.toString() || "5",
+        stockStatus: p.stockStatus || "IN_STOCK",
+        weight: p.weight?.toString() || "",
+        length: p.length?.toString() || "",
+        width: p.width?.toString() || "",
+        height: p.height?.toString() || "",
+        isFeatured: p.isFeatured || false,
+        isLivestock: p.isLivestock || false,
+        requiresShipping: p.requiresShipping ?? true,
+        seoTitle: p.seoTitle || "",
+        seoDescription: p.seoDescription || "",
+      });
+    } catch (error) {
+      console.error("Failed to fetch product:", error);
+      router.push("/admin/products");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   async function fetchCategories() {
     try {
@@ -56,35 +142,13 @@ export default function NewProductPage() {
     }
   }
 
-  function generateSlug(name: string) {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
-  }
-
-  function generateSKU(name: string) {
-    const prefix = name.substring(0, 3).toUpperCase();
-    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `${prefix}-${random}`;
-  }
-
-  function handleNameChange(name: string) {
-    setFormData((prev) => ({
-      ...prev,
-      name,
-      slug: prev.slug || generateSlug(name),
-      sku: prev.sku || generateSKU(name),
-    }));
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
+    setSaving(true);
 
     try {
-      const res = await fetch("/api/admin/products", {
-        method: "POST",
+      const res = await fetch(`/api/admin/products/${id}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
@@ -102,39 +166,118 @@ export default function NewProductPage() {
       });
 
       if (res.ok) {
-        const data = await res.json();
-        router.push(`/admin/products/${data.product.id}`);
+        alert("Product updated successfully!");
+        fetchProduct();
       } else {
         const error = await res.json();
-        alert(error.error || "Failed to create product");
+        alert(error.error || "Failed to update product");
       }
     } catch (error) {
-      console.error("Failed to create product:", error);
-      alert("Failed to create product");
+      console.error("Failed to update product:", error);
+      alert("Failed to update product");
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
+  }
+
+  async function handleDelete() {
+    if (!confirm("Are you sure you want to delete this product? This action cannot be undone.")) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/products/${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        router.push("/admin/products");
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to delete product");
+      }
+    } catch (error) {
+      console.error("Failed to delete product:", error);
+      alert("Failed to delete product");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00D4FF]"></div>
+      </div>
+    );
   }
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Link
-          href="/admin/products"
-          className="p-2 rounded-lg hover:bg-secondary transition-colors"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold">Add Product</h1>
-          <p className="text-muted-foreground">Create a new product</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link
+            href="/admin/products"
+            className="p-2 rounded-lg hover:bg-secondary transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <div>
+            <h1 className="text-2xl font-bold">Edit Product</h1>
+            <p className="text-muted-foreground">{product?.name}</p>
+          </div>
         </div>
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-destructive/20 text-destructive font-medium rounded-lg hover:bg-destructive/30 transition-colors disabled:opacity-50"
+        >
+          <Trash2 className="h-4 w-4" />
+          {deleting ? "Deleting..." : "Delete"}
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
+            {/* Images */}
+            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <ImagePlus className="h-5 w-5" />
+                Images
+              </h2>
+
+              <div className="grid grid-cols-4 gap-4">
+                {product?.images?.map((image) => (
+                  <div key={image.id} className="relative aspect-square rounded-lg bg-secondary overflow-hidden group">
+                    <Image
+                      src={image.url}
+                      alt={image.alt || product.name}
+                      fill
+                      className="object-cover"
+                    />
+                    <button
+                      type="button"
+                      className="absolute top-2 right-2 p-1 bg-destructive rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3 text-white" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className="aspect-square rounded-lg border-2 border-dashed border-border flex items-center justify-center hover:border-[#00D4FF] transition-colors"
+                >
+                  <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Upload images via the API or image management system
+              </p>
+            </div>
+
             {/* Basic Info */}
             <div className="bg-card border border-border rounded-lg p-6 space-y-4">
               <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -147,7 +290,7 @@ export default function NewProductPage() {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => handleNameChange(e.target.value)}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter product name"
                   required
                   className="w-full h-10 px-4 bg-background border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#00D4FF]"
@@ -485,11 +628,11 @@ export default function NewProductPage() {
             <div className="bg-card border border-border rounded-lg p-6">
               <button
                 type="submit"
-                disabled={loading}
+                disabled={saving}
                 className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-[#00D4FF] text-[#0A1628] font-medium rounded-lg hover:bg-[#00D4FF]/90 transition-colors disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
-                {loading ? "Creating..." : "Create Product"}
+                {saving ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import prisma from "@/lib/db";
 
 // GET - List all notes for an order
 export async function GET(
@@ -23,7 +23,15 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ notes });
+    // Transform to match frontend expectations
+    const transformedNotes = notes.map((n) => ({
+      id: n.id,
+      note: n.content,
+      isCustomerNote: n.type === "CUSTOMER",
+      createdAt: n.createdAt,
+    }));
+
+    return NextResponse.json({ notes: transformedNotes });
   } catch (error) {
     console.error("Get order notes error:", error);
     return NextResponse.json(
@@ -41,7 +49,10 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { content, type, addedBy } = body;
+    // Accept both frontend format (note, isCustomerNote) and backend format (content, type)
+    const content = body.note || body.content;
+    const type = body.isCustomerNote ? "CUSTOMER" : (body.type || "PRIVATE");
+    const addedBy = body.addedBy;
 
     if (!content) {
       return NextResponse.json(
@@ -68,10 +79,15 @@ export async function POST(
       },
     });
 
-    // TODO: If type is CUSTOMER, send email notification
-    // This would trigger the email notification system
+    // Transform to match frontend expectations
+    const transformedNote = {
+      id: note.id,
+      note: note.content,
+      isCustomerNote: note.type === "CUSTOMER",
+      createdAt: note.createdAt,
+    };
 
-    return NextResponse.json({ note }, { status: 201 });
+    return NextResponse.json(transformedNote, { status: 201 });
   } catch (error) {
     console.error("Create order note error:", error);
     return NextResponse.json(

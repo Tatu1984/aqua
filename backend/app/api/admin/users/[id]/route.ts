@@ -39,6 +39,19 @@ export async function GET(
             createdAt: true,
           },
         },
+        reviews: {
+          take: 10,
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            rating: true,
+            content: true,
+            createdAt: true,
+            product: {
+              select: { name: true },
+            },
+          },
+        },
       },
     });
 
@@ -46,7 +59,19 @@ export async function GET(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json(user);
+    // Transform reviews to match frontend expectations (content -> comment)
+    const transformedUser = {
+      ...user,
+      reviews: user.reviews.map((review) => ({
+        id: review.id,
+        rating: review.rating,
+        comment: review.content,
+        createdAt: review.createdAt,
+        product: review.product,
+      })),
+    };
+
+    return NextResponse.json(transformedUser);
   } catch (error) {
     console.error("Error fetching user:", error);
     return NextResponse.json(

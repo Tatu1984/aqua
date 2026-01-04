@@ -92,7 +92,7 @@ async function main() {
       isFeatured: true,
       expressOnly: true,
       shippingRestricted: true,
-      allowedCities: JSON.stringify(["Mumbai", "Delhi", "Bangalore", "Hyderabad"]),
+      allowedPincodes: JSON.stringify(["Mumbai", "Delhi", "Bangalore", "Hyderabad"]),
     },
     {
       name: "Betta Fish - Halfmoon Male",
@@ -117,7 +117,7 @@ async function main() {
       isFeatured: true,
       expressOnly: true,
       shippingRestricted: true,
-      allowedCities: JSON.stringify(["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai"]),
+      allowedPincodes: JSON.stringify(["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai"]),
     },
     {
       name: "Cardinal Tetra (School of 10)",
@@ -139,7 +139,7 @@ async function main() {
       }),
       expressOnly: true,
       shippingRestricted: true,
-      allowedCities: JSON.stringify(["Mumbai", "Delhi", "Bangalore"]),
+      allowedPincodes: JSON.stringify(["Mumbai", "Delhi", "Bangalore"]),
     },
     {
       name: "Corydoras Panda",
@@ -162,7 +162,7 @@ async function main() {
       }),
       expressOnly: true,
       shippingRestricted: true,
-      allowedCities: JSON.stringify(["Mumbai", "Delhi", "Bangalore", "Hyderabad"]),
+      allowedPincodes: JSON.stringify(["Mumbai", "Delhi", "Bangalore", "Hyderabad"]),
     },
     {
       name: "Guppy Assorted (5 Pairs)",
@@ -184,7 +184,7 @@ async function main() {
       }),
       expressOnly: true,
       shippingRestricted: true,
-      allowedCities: JSON.stringify(["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Pune"]),
+      allowedPincodes: JSON.stringify(["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Chennai", "Pune"]),
     },
 
     // Plants
@@ -258,7 +258,7 @@ async function main() {
       isFeatured: true,
       expressOnly: true,
       shippingRestricted: true,
-      allowedCities: JSON.stringify(["Mumbai", "Delhi", "Bangalore"]),
+      allowedPincodes: JSON.stringify(["Mumbai", "Delhi", "Bangalore"]),
     },
     {
       name: "Blue Dream Shrimp (Pack of 5)",
@@ -280,7 +280,7 @@ async function main() {
       }),
       expressOnly: true,
       shippingRestricted: true,
-      allowedCities: JSON.stringify(["Mumbai", "Delhi", "Bangalore"]),
+      allowedPincodes: JSON.stringify(["Mumbai", "Delhi", "Bangalore"]),
     },
     {
       name: "Amano Shrimp (Pack of 5)",
@@ -302,7 +302,7 @@ async function main() {
       }),
       expressOnly: true,
       shippingRestricted: true,
-      allowedCities: JSON.stringify(["Mumbai", "Delhi", "Bangalore", "Hyderabad"]),
+      allowedPincodes: JSON.stringify(["Mumbai", "Delhi", "Bangalore", "Hyderabad"]),
     },
 
     // Equipment

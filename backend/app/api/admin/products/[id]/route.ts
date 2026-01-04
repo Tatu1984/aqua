@@ -28,13 +28,10 @@ export async function GET(
         livestockData: product.livestockData
           ? JSON.parse(product.livestockData)
           : null,
-        allowedCities: product.allowedCities
-          ? JSON.parse(product.allowedCities)
+        allowedPincodes: product.allowedPincodes
+          ? JSON.parse(product.allowedPincodes)
           : null,
-        variants: product.variants.map((v) => ({
-          ...v,
-          attributes: v.attributes ? JSON.parse(v.attributes) : null,
-        })),
+        variants: product.variants,
       },
     });
   } catch (error) {
@@ -106,11 +103,11 @@ export async function PUT(
         price: data.price,
         compareAtPrice: data.compareAtPrice,
         costPrice: data.costPrice,
-        trackInventory: data.trackInventory,
+        manageStock: data.manageStock,
         stockQuantity: data.stockQuantity,
         lowStockThreshold: data.lowStockThreshold,
         stockStatus: data.stockStatus,
-        allowBackorder: data.allowBackorder,
+        backorderMode: data.backorderMode,
         seoTitle: data.seoTitle,
         seoDescription: data.seoDescription,
         weight: data.weight,
@@ -122,8 +119,8 @@ export async function PUT(
           ? JSON.stringify(data.livestockData)
           : null,
         shippingRestricted: data.shippingRestricted,
-        allowedCities: data.allowedCities
-          ? JSON.stringify(data.allowedCities)
+        allowedPincodes: data.allowedPincodes
+          ? JSON.stringify(data.allowedPincodes)
           : null,
         expressOnly: data.expressOnly,
         isFeatured: data.isFeatured,
@@ -181,7 +178,6 @@ export async function PUT(
             stockStatus:
               (v.stockQuantity || 0) > 0 ? "IN_STOCK" : "OUT_OF_STOCK",
             image: v.image,
-            attributes: v.attributes ? JSON.stringify(v.attributes) : null,
             sortOrder: idx,
           })
         ),

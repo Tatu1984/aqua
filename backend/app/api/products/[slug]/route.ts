@@ -76,8 +76,8 @@ export async function GET(
           : null,
         expressOnly: product.expressOnly,
         shippingRestricted: product.shippingRestricted,
-        allowedCities: product.allowedCities
-          ? JSON.parse(product.allowedCities)
+        allowedPincodes: product.allowedPincodes
+          ? JSON.parse(product.allowedPincodes)
           : [],
         category: product.category
           ? { name: product.category.name, slug: product.category.slug }
@@ -96,7 +96,6 @@ export async function GET(
           stockStatus: v.stockStatus,
           stockQuantity: v.stockQuantity,
           image: v.image,
-          attributes: v.attributes ? JSON.parse(v.attributes) : null,
         })),
         reviews: {
           items: product.reviews.map((r) => ({

@@ -127,11 +127,11 @@ export async function POST(request: NextRequest) {
         price: data.price,
         compareAtPrice: data.compareAtPrice,
         costPrice: data.costPrice,
-        trackInventory: data.trackInventory ?? true,
+        manageStock: data.manageStock ?? true,
         stockQuantity: data.stockQuantity || 0,
         lowStockThreshold: data.lowStockThreshold || 5,
         stockStatus: data.stockStatus || "IN_STOCK",
-        allowBackorder: data.allowBackorder ?? false,
+        backorderMode: data.backorderMode ?? "NO",
         seoTitle: data.seoTitle,
         seoDescription: data.seoDescription,
         weight: data.weight,
@@ -143,8 +143,8 @@ export async function POST(request: NextRequest) {
           ? JSON.stringify(data.livestockData)
           : null,
         shippingRestricted: data.shippingRestricted ?? false,
-        allowedCities: data.allowedCities
-          ? JSON.stringify(data.allowedCities)
+        allowedPincodes: data.allowedPincodes
+          ? JSON.stringify(data.allowedPincodes)
           : null,
         expressOnly: data.expressOnly ?? false,
         isFeatured: data.isFeatured ?? false,
@@ -184,9 +184,6 @@ export async function POST(request: NextRequest) {
                   stockStatus:
                     (v.stockQuantity || 0) > 0 ? "IN_STOCK" : "OUT_OF_STOCK",
                   image: v.image,
-                  attributes: v.attributes
-                    ? JSON.stringify(v.attributes)
-                    : null,
                   sortOrder: idx,
                 })
               ),

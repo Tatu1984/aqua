@@ -256,7 +256,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
               {order.items.map((item) => (
                 <div key={item.id} className="p-4 flex items-center gap-4">
                   <div className="relative w-16 h-16 rounded-lg bg-secondary overflow-hidden flex-shrink-0">
-                    {item.product.images[0]?.url ? (
+                    {item.product?.images?.[0]?.url ? (
                       <Image
                         src={item.product.images[0].url}
                         alt={item.product.name}

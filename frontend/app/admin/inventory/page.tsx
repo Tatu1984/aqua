@@ -94,7 +94,7 @@ export default function InventoryPage() {
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="relative w-10 h-10 rounded-lg bg-secondary overflow-hidden flex-shrink-0">
-                          {product.images[0]?.url ? <Image src={product.images[0].url} alt={product.name} fill className="object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Package className="h-5 w-5 text-muted-foreground" /></div>}
+                          {product.images?.[0]?.url ? <Image src={product.images[0].url} alt={product.name} fill className="object-cover" /> : <div className="w-full h-full flex items-center justify-center"><Package className="h-5 w-5 text-muted-foreground" /></div>}
                         </div>
                         <span className="font-medium line-clamp-1">{product.name}</span>
                       </div>

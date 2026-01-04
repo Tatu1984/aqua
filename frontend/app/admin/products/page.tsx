@@ -146,7 +146,7 @@ function ProductsContent() {
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="relative w-12 h-12 rounded-lg bg-secondary overflow-hidden flex-shrink-0">
-                            {product.images[0]?.url ? (
+                            {product.images?.[0]?.url ? (
                               <Image
                                 src={product.images[0].url}
                                 alt={product.name}

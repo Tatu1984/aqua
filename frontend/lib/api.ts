@@ -1,11 +1,9 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
 async function fetcher<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  const url = `${API_URL}${endpoint}`;
-  const res = await fetch(url, {
+  // Use relative path to go through frontend's proxy (rewrites in next.config.ts)
+  const res = await fetch(endpoint, {
     ...options,
     credentials: "include",
     headers: {

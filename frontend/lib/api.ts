@@ -1,9 +1,22 @@
+// For server-side requests, we need the full backend URL
+// For client-side requests, relative paths go through the rewrite proxy
+function getBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    // Client-side: use relative path (goes through next.config.ts rewrites)
+    return "";
+  }
+  // Server-side: use direct backend URL
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+}
+
 async function fetcher<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  // Use relative path to go through frontend's proxy (rewrites in next.config.ts)
-  const res = await fetch(endpoint, {
+  const baseUrl = getBaseUrl();
+  const url = `${baseUrl}${endpoint}`;
+
+  const res = await fetch(url, {
     ...options,
     credentials: "include",
     headers: {

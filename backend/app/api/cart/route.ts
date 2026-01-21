@@ -1,5 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db";
+import { z } from "zod";
+
+// Validation schemas
+const addToCartSchema = z.object({
+  productId: z.string().min(1, "Product ID required"),
+  variantId: z.string().optional().nullable(),
+  quantity: z.number().int().min(1, "Quantity must be at least 1").max(100, "Maximum 100 items").default(1),
+});
+
+const updateCartSchema = z.object({
+  itemId: z.string().min(1, "Item ID required"),
+  quantity: z.number().int().min(0, "Quantity must be 0 or more").max(100, "Maximum 100 items"),
+});
 
 // Get cart
 export async function GET(request: NextRequest) {
@@ -102,7 +115,18 @@ export async function GET(request: NextRequest) {
 // Add to cart
 export async function POST(request: NextRequest) {
   try {
-    const { productId, variantId, quantity = 1 } = await request.json();
+    const body = await request.json();
+
+    // Validate input
+    const validation = addToCartSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors[0].message },
+        { status: 400 }
+      );
+    }
+
+    const { productId, variantId, quantity } = validation.data;
 
     let sessionId = request.cookies.get("cart_session")?.value;
 
@@ -168,7 +192,18 @@ export async function POST(request: NextRequest) {
 // Update cart item
 export async function PUT(request: NextRequest) {
   try {
-    const { itemId, quantity } = await request.json();
+    const body = await request.json();
+
+    // Validate input
+    const validation = updateCartSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors[0].message },
+        { status: 400 }
+      );
+    }
+
+    const { itemId, quantity } = validation.data;
 
     if (quantity < 1) {
       await prisma.cartItem.delete({

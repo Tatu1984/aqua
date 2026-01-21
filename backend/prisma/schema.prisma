@@ -13,7 +13,7 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
-  password      String
+  password      String?   // Nullable for OAuth users
   firstName     String?
   lastName      String?
   phone         String?
@@ -27,6 +27,10 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // OAuth fields
+  authProvider  String?   // google, facebook, or null for email/password
+  authProviderId String?  // Provider's user ID
+
   addresses      Address[]
   orders         Order[]
   reviews        Review[]
@@ -36,6 +40,7 @@ model User {
   activityLogs   ActivityLog[]
   notifications  Notification[]
 
+  @@unique([authProvider, authProviderId])
   @@map("users")
 }
 

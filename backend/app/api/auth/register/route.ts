@@ -1,26 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
-import { SignJWT } from "jose";
+import { createToken, UserRole } from "@/lib/auth";
+import { z } from "zod";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "aqua-secret-key-change-in-production"
-);
+// Input validation schema with strong password requirements
+const registerSchema = z.object({
+  email: z.string().email("Invalid email format").max(255),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password too long")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
+  firstName: z.string().max(100).optional(),
+  lastName: z.string().max(100).optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password, firstName, lastName } = await request.json();
+    const body = await request.json();
 
-    if (!email || !password) {
+    // Validate input
+    const validationResult = registerSchema.safeParse(body);
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: validationResult.error.errors[0].message },
         { status: 400 }
       );
     }
 
+    const { email, password, firstName, lastName } = validationResult.data;
+    const normalizedEmail = email.toLowerCase();
+
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
     });
 
     if (existingUser) {
@@ -30,24 +46,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash password with stronger rounds
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
     const user = await prisma.user.create({
       data: {
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
-        firstName,
-        lastName,
+        firstName: firstName || null,
+        lastName: lastName || null,
       },
     });
 
-    // Generate JWT
-    const token = await new SignJWT({ userId: user.id, email: user.email })
-      .setProtectedHeader({ alg: "HS256" })
-      .setExpirationTime("7d")
-      .sign(JWT_SECRET);
+    // Generate JWT using auth library
+    const token = await createToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role as UserRole,
+    });
 
     const response = NextResponse.json({
       user: {
@@ -55,10 +72,11 @@ export async function POST(request: NextRequest) {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
+        role: user.role,
       },
     });
 
-    // Set cookie
+    // Set cookie with secure settings
     response.cookies.set("auth-token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

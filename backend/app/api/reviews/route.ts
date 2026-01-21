@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { jwtVerify } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "aqua-secret-key-change-in-production"
-);
+import { getAuthUser } from "@/lib/auth";
 
 async function getUserId(request: NextRequest): Promise<string | null> {
-  const token = request.cookies.get("auth-token")?.value;
-  if (!token) return null;
-  try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    return payload.userId as string;
-  } catch {
-    return null;
-  }
+  const user = await getAuthUser(request);
+  return user?.id || null;
 }
 
 // Get reviews for a product

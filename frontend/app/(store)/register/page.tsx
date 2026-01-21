@@ -3,10 +3,21 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, Check, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SocialLoginButtons } from "@/components/auth/social-login-buttons";
+
+// Password validation helper
+function validatePassword(password: string) {
+  return {
+    minLength: password.length >= 8,
+    hasUppercase: /[A-Z]/.test(password),
+    hasLowercase: /[a-z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+  };
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -23,6 +34,9 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const passwordChecks = validatePassword(formData.password);
+  const isPasswordValid = Object.values(passwordChecks).every(Boolean);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -36,8 +50,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (!isPasswordValid) {
+      setError("Password does not meet requirements");
       return;
     }
 
@@ -111,7 +125,7 @@ export default function RegisterPage() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="At least 6 characters"
+                placeholder="Create a strong password"
                 required
               />
               <button
@@ -122,6 +136,14 @@ export default function RegisterPage() {
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
+            {formData.password && (
+              <div className="mt-2 space-y-1 text-xs">
+                <PasswordCheck passed={passwordChecks.minLength} text="At least 8 characters" />
+                <PasswordCheck passed={passwordChecks.hasUppercase} text="One uppercase letter" />
+                <PasswordCheck passed={passwordChecks.hasLowercase} text="One lowercase letter" />
+                <PasswordCheck passed={passwordChecks.hasNumber} text="One number" />
+              </div>
+            )}
           </div>
 
           <div>
@@ -136,11 +158,13 @@ export default function RegisterPage() {
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button type="submit" className="w-full" disabled={loading || !isPasswordValid}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create Account
           </Button>
         </form>
+
+        <SocialLoginButtons redirect="/" />
 
         <p className="text-center text-sm text-muted-foreground mt-6">
           Already have an account?{" "}
@@ -149,6 +173,15 @@ export default function RegisterPage() {
           </Link>
         </p>
       </div>
+    </div>
+  );
+}
+
+function PasswordCheck({ passed, text }: { passed: boolean; text: string }) {
+  return (
+    <div className={`flex items-center gap-1.5 ${passed ? "text-green-600" : "text-muted-foreground"}`}>
+      {passed ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+      <span>{text}</span>
     </div>
   );
 }

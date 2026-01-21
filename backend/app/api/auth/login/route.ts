@@ -1,32 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
-import { SignJWT } from "jose";
+import { createToken, UserRole } from "@/lib/auth";
+import { z } from "zod";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "aqua-secret-key-change-in-production"
-);
+// Input validation schema
+const loginSchema = z.object({
+  email: z.string().email("Invalid email format").max(255),
+  password: z.string().min(1, "Password is required").max(128),
+});
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
 
-    if (!email || !password) {
+    // Validate input
+    const validationResult = loginSchema.safeParse(body);
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: validationResult.error.errors[0].message },
         { status: 400 }
       );
     }
 
+    const { email, password } = validationResult.data;
+
     // Find user
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: email.toLowerCase() },
     });
 
     if (!user) {
+      // Use same error message for security (prevent user enumeration)
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 }
+      );
+    }
+
+    // Check if user signed up via OAuth (no password)
+    if (!user.password) {
+      const provider = user.authProvider === "google" ? "Google" :
+                       user.authProvider === "facebook" ? "Facebook" : "social login";
+      return NextResponse.json(
+        { error: `This account uses ${provider}. Please sign in with ${provider}.` },
+        { status: 400 }
       );
     }
 
@@ -40,11 +58,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate JWT
-    const token = await new SignJWT({ userId: user.id, email: user.email, role: user.role })
-      .setProtectedHeader({ alg: "HS256" })
-      .setExpirationTime("7d")
-      .sign(JWT_SECRET);
+    // Generate JWT using auth library
+    const token = await createToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role as UserRole,
+    });
 
     const response = NextResponse.json({
       user: {
@@ -56,7 +75,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Set cookie
+    // Set cookie with secure settings
     response.cookies.set("auth-token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",

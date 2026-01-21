@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { jwtVerify } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "aqua-secret-key-change-in-production"
-);
+import { verifyToken } from "@/lib/auth";
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,11 +10,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ user: null }, { status: 200 });
     }
 
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    const userId = payload.userId as string;
+    const payload = await verifyToken(token);
+    if (!payload) {
+      return NextResponse.json({ user: null }, { status: 200 });
+    }
 
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: payload.userId },
       select: {
         id: true,
         email: true,

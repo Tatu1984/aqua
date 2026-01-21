@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { jwtVerify } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "aqua-secret-key-change-in-production"
-);
+import { getAuthUser, verifyToken } from "@/lib/auth";
 
 function generateOrderNumber() {
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -15,14 +11,13 @@ function generateOrderNumber() {
 // Get user orders
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get("auth-token")?.value;
+    const user = await getAuthUser(request);
 
-    if (!token) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    const userId = payload.userId as string;
+    const userId = user.id;
 
     const orders = await prisma.order.findMany({
       where: { userId },
@@ -62,12 +57,11 @@ export async function POST(request: NextRequest) {
     let userId: string | null = null;
     const token = request.cookies.get("auth-token")?.value;
     if (token) {
-      try {
-        const { payload } = await jwtVerify(token, JWT_SECRET);
-        userId = payload.userId as string;
-      } catch {
-        // Guest checkout
+      const payload = await verifyToken(token);
+      if (payload) {
+        userId = payload.userId;
       }
+      // If token is invalid, allow guest checkout
     }
 
     // Create or find address

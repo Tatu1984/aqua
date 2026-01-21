@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { jwtVerify } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "aqua-secret-key-change-in-production"
-);
+import { verifyToken, getAuthUser } from "@/lib/auth";
 
 export async function GET(
   request: NextRequest,
@@ -37,15 +33,13 @@ export async function GET(
 
     // Verify ownership if logged in
     if (token) {
-      try {
-        const { payload } = await jwtVerify(token, JWT_SECRET);
-        const userId = payload.userId as string;
-        if (order.userId && order.userId !== userId) {
+      const payload = await verifyToken(token);
+      if (payload) {
+        if (order.userId && order.userId !== payload.userId) {
           return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
         }
-      } catch {
-        // Allow guest access by order number
       }
+      // If token invalid, allow guest access by order ID
     }
 
     return NextResponse.json({ order });
@@ -62,16 +56,13 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const token = request.cookies.get("auth-token")?.value;
+    const user = await getAuthUser(request);
 
-    if (!token) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { payload } = await jwtVerify(token, JWT_SECRET);
-    const role = payload.role as string;
-
-    if (role !== "ADMIN") {
+    if (user.role !== "ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

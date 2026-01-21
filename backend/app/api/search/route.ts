@@ -1,18 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { z } from "zod";
+
+// Input validation schema
+const searchQuerySchema = z.object({
+  q: z.string().max(200, "Search query too long").optional().default(""),
+  category: z.string().max(100).optional(),
+  minPrice: z.string().optional().transform((val) => val ? parseFloat(val) : undefined),
+  maxPrice: z.string().optional().transform((val) => val ? parseFloat(val) : undefined),
+  inStock: z.enum(["true", "false"]).optional(),
+  isLivestock: z.enum(["true", "false"]).optional(),
+  sort: z.enum(["relevance", "price_asc", "price_desc", "name", "newest", "popular"]).optional().default("relevance"),
+  page: z.string().optional().transform((val) => Math.max(1, parseInt(val || "1"))),
+  limit: z.string().optional().transform((val) => Math.min(100, Math.max(1, parseInt(val || "12")))),
+});
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const q = searchParams.get("q") || "";
-    const category = searchParams.get("category");
-    const minPrice = searchParams.get("minPrice");
-    const maxPrice = searchParams.get("maxPrice");
-    const inStock = searchParams.get("inStock");
-    const isLivestock = searchParams.get("isLivestock");
-    const sort = searchParams.get("sort") || "relevance";
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "12");
+
+    // Parse and validate query params
+    const params: Record<string, string> = {};
+    searchParams.forEach((value, key) => {
+      params[key] = value;
+    });
+
+    const validation = searchQuerySchema.safeParse(params);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error.errors[0].message },
+        { status: 400 }
+      );
+    }
+
+    const { q, category, minPrice, maxPrice, inStock, isLivestock, sort, page, limit } = validation.data;
 
     const where: Record<string, unknown> = {
       status: "PUBLISHED",
@@ -42,11 +63,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Price filter
-    if (minPrice || maxPrice) {
+    // Price filter (already validated and transformed to numbers)
+    if (minPrice !== undefined || maxPrice !== undefined) {
       where.price = {};
-      if (minPrice) (where.price as Record<string, number>).gte = parseFloat(minPrice);
-      if (maxPrice) (where.price as Record<string, number>).lte = parseFloat(maxPrice);
+      if (minPrice !== undefined && !isNaN(minPrice)) {
+        (where.price as Record<string, number>).gte = minPrice;
+      }
+      if (maxPrice !== undefined && !isNaN(maxPrice)) {
+        (where.price as Record<string, number>).lte = maxPrice;
+      }
     }
 
     // Stock filter

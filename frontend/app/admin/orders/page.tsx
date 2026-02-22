@@ -14,7 +14,8 @@ interface Order {
   paymentStatus: string;
   createdAt: string;
   user: { firstName: string; lastName: string; email: string } | null;
-  items: { id: string }[];
+  items?: { id: string }[];
+  _count?: { items: number };
 }
 
 function formatPrice(price: number) {
@@ -183,7 +184,7 @@ function OrdersContent() {
                           </p>
                         </div>
                       </td>
-                      <td className="p-4 text-sm">{order.items.length} items</td>
+                      <td className="p-4 text-sm">{order._count?.items ?? order.items?.length ?? 0} items</td>
                       <td className="p-4 font-medium">{formatPrice(order.total)}</td>
                       <td className="p-4">{getStatusBadge(order.status)}</td>
                       <td className="p-4">{getPaymentBadge(order.paymentStatus)}</td>

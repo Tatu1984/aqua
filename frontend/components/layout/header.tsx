@@ -12,10 +12,6 @@ import {
   Menu,
   ChevronDown,
   Fish,
-  Leaf,
-  Settings,
-  Droplets,
-  Package,
   LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -41,65 +37,13 @@ import { useCart } from "@/hooks/use-cart";
 import { useAuth } from "@/hooks/use-auth";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import { SearchAutocomplete } from "@/components/search/search-autocomplete";
+import type { MenuItem } from "@/lib/api";
 
-const categories = [
-  {
-    name: "Livestock",
-    href: "/category/livestock",
-    icon: Fish,
-    children: [
-      { name: "Freshwater Fish", href: "/category/freshwater-fish" },
-      { name: "Shrimp & Invertebrates", href: "/category/shrimp" },
-      { name: "Snails", href: "/category/snails" },
-    ],
-  },
-  {
-    name: "Plants",
-    href: "/category/plants",
-    icon: Leaf,
-    children: [
-      { name: "Foreground Plants", href: "/category/foreground-plants" },
-      { name: "Midground Plants", href: "/category/midground-plants" },
-      { name: "Background Plants", href: "/category/background-plants" },
-      { name: "Floating Plants", href: "/category/floating-plants" },
-    ],
-  },
-  {
-    name: "Equipment",
-    href: "/category/equipment",
-    icon: Settings,
-    children: [
-      { name: "Filters", href: "/category/filters" },
-      { name: "Lighting", href: "/category/lighting" },
-      { name: "Heaters", href: "/category/heaters" },
-      { name: "Air Pumps", href: "/category/air-pumps" },
-      { name: "CO2 Systems", href: "/category/co2-systems" },
-    ],
-  },
-  {
-    name: "Aquariums",
-    href: "/category/aquariums",
-    icon: Droplets,
-    children: [
-      { name: "Nano Tanks", href: "/category/nano-tanks" },
-      { name: "Standard Tanks", href: "/category/standard-tanks" },
-      { name: "Rimless Tanks", href: "/category/rimless-tanks" },
-    ],
-  },
-  {
-    name: "Supplies",
-    href: "/category/supplies",
-    icon: Package,
-    children: [
-      { name: "Food & Nutrition", href: "/category/food" },
-      { name: "Water Care", href: "/category/water-care" },
-      { name: "Substrates", href: "/category/substrates" },
-      { name: "Decorations", href: "/category/decorations" },
-    ],
-  },
-];
+interface HeaderProps {
+  menuItems?: MenuItem[];
+}
 
-export function Header() {
+export function Header({ menuItems = [] }: HeaderProps) {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [searchOpen, setSearchOpen] = React.useState(false);
@@ -176,26 +120,27 @@ export function Header() {
                   <SheetTitle className="text-left">Menu</SheetTitle>
                 </SheetHeader>
                 <nav className="mt-6 space-y-1">
-                  {categories.map((category) => (
-                    <div key={category.name}>
+                  {menuItems.map((item) => (
+                    <div key={item.id}>
                       <Link
-                        href={category.href}
+                        href={item.url || "#"}
                         className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-secondary transition-colors"
                       >
-                        <category.icon className="h-5 w-5 text-primary" />
-                        <span>{category.name}</span>
+                        <span>{item.title}</span>
                       </Link>
-                      <div className="ml-8 space-y-1">
-                        {category.children.map((child) => (
-                          <Link
-                            key={child.name}
-                            href={child.href}
-                            className="block px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            {child.name}
-                          </Link>
-                        ))}
-                      </div>
+                      {item.children?.length > 0 && (
+                        <div className="ml-8 space-y-1">
+                          {item.children.map((child) => (
+                            <Link
+                              key={child.id}
+                              href={child.url || "#"}
+                              className="block px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              {child.title}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </nav>
@@ -217,34 +162,36 @@ export function Header() {
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-1">
-              {categories.map((category) => (
+              {menuItems.map((item) => (
                 <div
-                  key={category.name}
+                  key={item.id}
                   className="relative"
-                  onMouseEnter={() => setActiveCategory(category.name)}
+                  onMouseEnter={() => setActiveCategory(item.id)}
                   onMouseLeave={() => setActiveCategory(null)}
                 >
                   <Link
-                    href={category.href}
+                    href={item.url || "#"}
                     className={cn(
                       "flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
                       "hover:bg-secondary hover:text-foreground",
-                      activeCategory === category.name
+                      activeCategory === item.id
                         ? "text-primary"
                         : "text-muted-foreground"
                     )}
                   >
-                    {category.name}
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 transition-transform",
-                        activeCategory === category.name && "rotate-180"
-                      )}
-                    />
+                    {item.title}
+                    {item.children?.length > 0 && (
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 transition-transform",
+                          activeCategory === item.id && "rotate-180"
+                        )}
+                      />
+                    )}
                   </Link>
 
                   <AnimatePresence>
-                    {activeCategory === category.name && (
+                    {activeCategory === item.id && item.children?.length > 0 && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -253,13 +200,13 @@ export function Header() {
                         className="absolute top-full left-0 pt-2 w-56"
                       >
                         <div className="bg-card border border-border rounded-xl shadow-xl p-2">
-                          {category.children.map((child) => (
+                          {item.children.map((child) => (
                             <Link
-                              key={child.name}
-                              href={child.href}
+                              key={child.id}
+                              href={child.url || "#"}
                               className="block px-3 py-2 text-sm rounded-lg hover:bg-secondary transition-colors"
                             >
-                              {child.name}
+                              {child.title}
                             </Link>
                           ))}
                         </div>

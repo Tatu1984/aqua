@@ -3,36 +3,7 @@ import { Fish, Facebook, Instagram, Youtube, Twitter, Mail, Phone, MapPin } from
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-
-const footerLinks = {
-  shop: [
-    { name: "Freshwater Fish", href: "/category/freshwater-fish" },
-    { name: "Aquatic Plants", href: "/category/plants" },
-    { name: "Shrimp & Invertebrates", href: "/category/shrimp" },
-    { name: "Equipment", href: "/category/equipment" },
-    { name: "Food & Nutrition", href: "/category/food" },
-    { name: "New Arrivals", href: "/new-arrivals" },
-  ],
-  support: [
-    { name: "Contact Us", href: "/contact" },
-    { name: "FAQs", href: "/faqs" },
-    { name: "Shipping Info", href: "/shipping" },
-    { name: "Returns & Refunds", href: "/returns" },
-    { name: "Track Order", href: "/track-order" },
-    { name: "Live Stock Policy", href: "/livestock-policy" },
-  ],
-  company: [
-    { name: "About Us", href: "/about" },
-    { name: "Blog & Guides", href: "/blog" },
-    { name: "Careers", href: "/careers" },
-    { name: "Partner With Us", href: "/partner" },
-  ],
-  legal: [
-    { name: "Privacy Policy", href: "/privacy" },
-    { name: "Terms of Service", href: "/terms" },
-    { name: "Refund Policy", href: "/refund-policy" },
-  ],
-};
+import type { Menu } from "@/lib/api";
 
 const socialLinks = [
   { name: "Facebook", icon: Facebook, href: "#" },
@@ -41,7 +12,11 @@ const socialLinks = [
   { name: "Twitter", icon: Twitter, href: "#" },
 ];
 
-export function Footer() {
+interface FooterProps {
+  menus?: Menu[];
+}
+
+export function Footer({ menus = [] }: FooterProps) {
   return (
     <footer className="bg-ocean-dark border-t border-border">
       {/* Newsletter Section */}
@@ -98,73 +73,23 @@ export function Footer() {
             </div>
           </div>
 
-          {/* Shop Links */}
-          <div>
-            <h4 className="font-semibold mb-4">Shop</h4>
-            <ul className="space-y-2">
-              {footerLinks.shop.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Support Links */}
-          <div>
-            <h4 className="font-semibold mb-4">Support</h4>
-            <ul className="space-y-2">
-              {footerLinks.support.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Company Links */}
-          <div>
-            <h4 className="font-semibold mb-4">Company</h4>
-            <ul className="space-y-2">
-              {footerLinks.company.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Legal Links */}
-          <div>
-            <h4 className="font-semibold mb-4">Legal</h4>
-            <ul className="space-y-2">
-              {footerLinks.legal.map((link) => (
-                <li key={link.name}>
-                  <Link
-                    href={link.href}
-                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    {link.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {menus.map((menu) => (
+            <div key={menu.id}>
+              <h4 className="font-semibold mb-4">{menu.name}</h4>
+              <ul className="space-y-2">
+                {menu.items.map((item) => (
+                  <li key={item.id}>
+                    <Link
+                      href={item.url || "#"}
+                      className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      {item.title}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       </div>
 

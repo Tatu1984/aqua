@@ -2,6 +2,236 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+async function seedMenusAndPages() {
+  console.log("Seeding menus and pages...");
+
+  // --- Header Menu ---
+  const headerMenu = await prisma.menu.upsert({
+    where: { slug: "header" },
+    update: { name: "Header Navigation", location: "header" },
+    create: { name: "Header Navigation", slug: "header", location: "header" },
+  });
+  await prisma.menuItem.deleteMany({ where: { menuId: headerMenu.id } });
+
+  const headerCategories = [
+    {
+      title: "Livestock",
+      url: "/category/livestock",
+      children: [
+        { title: "Freshwater Fish", url: "/category/freshwater-fish" },
+        { title: "Shrimp & Invertebrates", url: "/category/shrimp" },
+        { title: "Snails", url: "/category/snails" },
+      ],
+    },
+    {
+      title: "Plants",
+      url: "/category/plants",
+      children: [
+        { title: "Foreground Plants", url: "/category/foreground-plants" },
+        { title: "Midground Plants", url: "/category/midground-plants" },
+        { title: "Background Plants", url: "/category/background-plants" },
+        { title: "Floating Plants", url: "/category/floating-plants" },
+      ],
+    },
+    {
+      title: "Equipment",
+      url: "/category/equipment",
+      children: [
+        { title: "Filters", url: "/category/filters" },
+        { title: "Lighting", url: "/category/lighting" },
+        { title: "Heaters", url: "/category/heaters" },
+        { title: "Air Pumps", url: "/category/air-pumps" },
+        { title: "CO2 Systems", url: "/category/co2-systems" },
+      ],
+    },
+    {
+      title: "Aquariums",
+      url: "/category/aquariums",
+      children: [
+        { title: "Nano Tanks", url: "/category/nano-tanks" },
+        { title: "Standard Tanks", url: "/category/standard-tanks" },
+        { title: "Rimless Tanks", url: "/category/rimless-tanks" },
+      ],
+    },
+    {
+      title: "Supplies",
+      url: "/category/supplies",
+      children: [
+        { title: "Food & Nutrition", url: "/category/food" },
+        { title: "Water Care", url: "/category/water-care" },
+        { title: "Substrates", url: "/category/substrates" },
+        { title: "Decorations", url: "/category/decorations" },
+      ],
+    },
+  ];
+
+  for (let i = 0; i < headerCategories.length; i++) {
+    const cat = headerCategories[i];
+    const parent = await prisma.menuItem.create({
+      data: {
+        menuId: headerMenu.id,
+        title: cat.title,
+        url: cat.url,
+        type: "CATEGORY",
+        sortOrder: i,
+        isActive: true,
+      },
+    });
+    for (let j = 0; j < cat.children.length; j++) {
+      const child = cat.children[j];
+      await prisma.menuItem.create({
+        data: {
+          menuId: headerMenu.id,
+          parentId: parent.id,
+          title: child.title,
+          url: child.url,
+          type: "CATEGORY",
+          sortOrder: j,
+          isActive: true,
+        },
+      });
+    }
+  }
+
+  // --- Footer Menus ---
+  const footerMenuDefs = [
+    {
+      slug: "footer-shop",
+      name: "Shop",
+      items: [
+        { title: "Freshwater Fish", url: "/category/freshwater-fish" },
+        { title: "Aquatic Plants", url: "/category/plants" },
+        { title: "Shrimp & Invertebrates", url: "/category/shrimp" },
+        { title: "Equipment", url: "/category/equipment" },
+        { title: "Food & Nutrition", url: "/category/food" },
+        { title: "New Arrivals", url: "/new-arrivals" },
+      ],
+    },
+    {
+      slug: "footer-support",
+      name: "Support",
+      items: [
+        { title: "Contact Us", url: "/contact" },
+        { title: "FAQs", url: "/faqs" },
+        { title: "Shipping Info", url: "/shipping-info" },
+        { title: "Returns & Refunds", url: "/returns" },
+        { title: "Track Order", url: "/account/orders" },
+        { title: "Live Stock Policy", url: "/livestock-policy" },
+      ],
+    },
+    {
+      slug: "footer-company",
+      name: "Company",
+      items: [
+        { title: "About Us", url: "/about" },
+        { title: "Blog & Guides", url: "/blog" },
+        { title: "Careers", url: "/careers" },
+        { title: "Partner With Us", url: "/partner" },
+      ],
+    },
+    {
+      slug: "footer-legal",
+      name: "Legal",
+      items: [
+        { title: "Privacy Policy", url: "/privacy-policy" },
+        { title: "Terms of Service", url: "/terms-of-service" },
+        { title: "Refund Policy", url: "/refund-policy" },
+      ],
+    },
+  ];
+
+  for (const def of footerMenuDefs) {
+    const menu = await prisma.menu.upsert({
+      where: { slug: def.slug },
+      update: { name: def.name, location: "footer" },
+      create: { name: def.name, slug: def.slug, location: "footer" },
+    });
+    await prisma.menuItem.deleteMany({ where: { menuId: menu.id } });
+    for (let i = 0; i < def.items.length; i++) {
+      await prisma.menuItem.create({
+        data: {
+          menuId: menu.id,
+          title: def.items[i].title,
+          url: def.items[i].url,
+          type: "CUSTOM",
+          sortOrder: i,
+          isActive: true,
+        },
+      });
+    }
+  }
+
+  // --- Pages ---
+  const pages = [
+    {
+      slug: "about",
+      title: "About Us",
+      content: "<h1>About Aqua</h1><p>Aqua is your one-stop destination for premium aquarium products, healthy livestock, and expert care guides. We are passionate about the aquarium hobby and committed to providing the best products and advice to our customers.</p><p>Founded by aquarium enthusiasts, we understand the joy and challenges of maintaining beautiful aquatic environments. Our team carefully selects every product and livestock to ensure the highest quality for your aquarium.</p>",
+    },
+    {
+      slug: "contact",
+      title: "Contact Us",
+      content: "<h1>Contact Us</h1><p>We'd love to hear from you! Reach out to us through any of the following channels:</p><ul><li><strong>Email:</strong> support@aqua.store</li><li><strong>Phone:</strong> +91 98765 43210</li><li><strong>Address:</strong> Mumbai, India</li></ul><p>Our support team is available Monday to Saturday, 9 AM to 6 PM IST.</p>",
+    },
+    {
+      slug: "faqs",
+      title: "Frequently Asked Questions",
+      content: "<h1>FAQs</h1><h2>Ordering</h2><p><strong>How do I place an order?</strong><br/>Browse our products, add items to your cart, and proceed to checkout.</p><h2>Shipping</h2><p><strong>Do you ship live fish?</strong><br/>Yes, we ship live fish and invertebrates via express delivery to select cities.</p><h2>Returns</h2><p><strong>What is your return policy?</strong><br/>We accept returns within 7 days for non-livestock items. Please see our Returns & Refunds page for details.</p>",
+    },
+    {
+      slug: "shipping-info",
+      title: "Shipping Information",
+      content: "<h1>Shipping Information</h1><p>We offer nationwide shipping for non-livestock items. Live fish and invertebrates are shipped via express delivery to select cities only.</p><h2>Delivery Times</h2><ul><li><strong>Standard Shipping:</strong> 5-7 business days</li><li><strong>Express Shipping:</strong> 1-2 business days</li></ul><h2>Free Shipping</h2><p>Orders over ₹999 qualify for free standard shipping.</p>",
+    },
+    {
+      slug: "returns",
+      title: "Returns & Refunds",
+      content: "<h1>Returns & Refunds</h1><p>We want you to be completely satisfied with your purchase.</p><h2>Non-Livestock Items</h2><p>You may return non-livestock items within 7 days of delivery for a full refund. Items must be unused and in original packaging.</p><h2>Livestock</h2><p>Due to the nature of live animals, we offer a Dead on Arrival (DOA) guarantee. Please photograph any DOA livestock within 2 hours of delivery and contact our support team.</p>",
+    },
+    {
+      slug: "livestock-policy",
+      title: "Live Stock Policy",
+      content: "<h1>Live Stock Policy</h1><p>We take the health and safety of our livestock very seriously.</p><h2>Shipping</h2><p>All livestock is shipped via express delivery with insulated packaging and heat/cold packs as needed.</p><h2>DOA Guarantee</h2><p>We guarantee live arrival. If any livestock arrives dead, please send photos within 2 hours of delivery for a full refund or replacement.</p><h2>Acclimation</h2><p>Please follow proper acclimation procedures when introducing new livestock to your aquarium.</p>",
+    },
+    {
+      slug: "privacy-policy",
+      title: "Privacy Policy",
+      content: "<h1>Privacy Policy</h1><p>Your privacy is important to us. This policy explains how we collect, use, and protect your personal information.</p><h2>Information We Collect</h2><p>We collect information you provide directly, such as your name, email, phone number, and shipping address when you create an account or place an order.</p><h2>How We Use Your Information</h2><p>We use your information to process orders, communicate with you, and improve our services.</p><h2>Data Security</h2><p>We implement appropriate security measures to protect your personal information.</p>",
+    },
+    {
+      slug: "terms-of-service",
+      title: "Terms of Service",
+      content: "<h1>Terms of Service</h1><p>By using Aqua, you agree to these terms of service.</p><h2>Account</h2><p>You are responsible for maintaining the security of your account and password.</p><h2>Orders</h2><p>All orders are subject to availability. We reserve the right to refuse or cancel orders at our discretion.</p><h2>Pricing</h2><p>All prices are listed in Indian Rupees (₹) and include applicable taxes.</p>",
+    },
+    {
+      slug: "refund-policy",
+      title: "Refund Policy",
+      content: "<h1>Refund Policy</h1><p>We offer refunds under the following conditions:</p><ul><li>Non-livestock items returned within 7 days in original condition</li><li>Livestock that arrives dead (DOA guarantee)</li><li>Damaged or defective products</li></ul><p>Refunds are processed within 5-7 business days to your original payment method.</p>",
+    },
+  ];
+
+  for (const page of pages) {
+    await prisma.page.upsert({
+      where: { slug: page.slug },
+      update: {
+        title: page.title,
+        content: page.content,
+        status: "PUBLISHED",
+      },
+      create: {
+        title: page.title,
+        slug: page.slug,
+        content: page.content,
+        seoTitle: page.title,
+        seoDescription: `${page.title} - Aqua Store`,
+        status: "PUBLISHED",
+      },
+    });
+  }
+
+  console.log("Menus and pages seeded successfully!");
+}
+
 async function main() {
   console.log("Seeding database...");
 
@@ -476,6 +706,8 @@ async function main() {
       role: "ADMIN",
     },
   });
+
+  await seedMenusAndPages();
 
   console.log("Database seeded successfully!");
 }

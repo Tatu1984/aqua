@@ -113,7 +113,46 @@ export async function removeCoupon() {
   });
 }
 
+// CMS - Menus
+export async function getMenus(location?: string) {
+  const query = location ? `?location=${location}` : "";
+  return fetcher<{ menus: Menu[] }>(`/api/cms/menus${query}`);
+}
+
+// CMS - Pages
+export async function getPage(slug: string) {
+  return fetcher<{ page: CMSPage }>(`/api/cms/pages/${slug}`);
+}
+
 // Types
+export interface MenuItem {
+  id: string;
+  title: string;
+  url: string | null;
+  type: string;
+  sortOrder: number;
+  isActive: boolean;
+  children: MenuItem[];
+}
+
+export interface Menu {
+  id: string;
+  name: string;
+  slug: string;
+  location: string | null;
+  items: MenuItem[];
+}
+
+export interface CMSPage {
+  id: string;
+  title: string;
+  slug: string;
+  content: string | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
+  template: string;
+}
+
 export interface ProductListItem {
   id: string;
   name: string;
